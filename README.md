@@ -4,11 +4,14 @@ This GitHub Action runs the critical journey script inside a Docker container.
 
 ## Inputs
 
+- `website`: The web url to test.
+- `test-name`: A name to identify the test.
 - `instructions`: Instructions for doing the test.
+- `cj-token`: Your secret token to access fore ai Critical Journey.
 
 ## Outputs
 
-- `result`: The output from the Python script.
+- `result`: The URL where you can view the test results.
 
 ## Example Usage
 
@@ -25,6 +28,9 @@ jobs:
         uses: actions/checkout@v2
       
       - name: Run CJ Action
-        uses: foreai-co/critical-journey@v1.0.0
+        uses: foreai-co/critical-journey@v1.0.2
         with:
-          instructions: 'Go to my website'
+          instructions: 'Go to my website and try logging in.'
+          website: 'https://staging.my_website.com'
+          test-name: 'Login test'
+          cj-token: ${{ secrets.CRITICAL_JOURNEY_TOKEN }}

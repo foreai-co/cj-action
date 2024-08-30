@@ -8,7 +8,7 @@ WORKDIR /app
 COPY  . /app
 
 # Install any necessary packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install requests
 
 # Make the script executable
 RUN chmod +x /app/script.py
