@@ -3,14 +3,29 @@ description: 'A GitHub Action to run a UI test based on user instructions'
 author: 'foreai-co'
 
 inputs:
-  instructions:
-    description: 'The instructions to test'
+  url:
+    description: 'URL of the website under test'
     required: true
-    default: 'Hello, World!'
+    default: ''
+
+  test-name:
+    description: 'A unique name to identify the test'
+    required: true
+    default: ''
+
+  instructions:
+    description: 'The instructions to test in natural language'
+    required: true
+    default: ''
+  
+  cj-token:
+    description: 'The token required to access the tool'
+    required: true
+    default: ''
 
 outputs:
   result:
-    description: 'The test result'
+    description: 'A message that includes a URL where the result will be available.'
 
 runs:
   using: 'docker'
