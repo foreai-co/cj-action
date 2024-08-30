@@ -1,0 +1,21 @@
+name: 'Critical Journey'
+description: 'A GitHub Action to run a UI test based on user instructions'
+author: 'foreai-co'
+
+inputs:
+  instructions:
+    description: 'The instructions to test'
+    required: true
+    default: 'Hello, World!'
+
+outputs:
+  result:
+    description: 'The test result'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+
+branding:
+  icon: 'cloud-lightning'
+  color: 'blue'
