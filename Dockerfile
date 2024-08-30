@@ -7,7 +7,7 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 COPY  . /app
 
-# Install any necessary packages specified in requirements.txt
+# Install required packages
 RUN pip install requests
 
 # Make the script executable

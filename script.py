@@ -1,22 +1,31 @@
 import os
+import sys
 import requests
 
 # Get input from environment variables
-website = os.getenv("INPUT_WEBSITE", "")
+# These ENV vars are set by github actions based on action.yml
+url = os.getenv("INPUT_URL", "")
 test_name = os.getenv("INPUT_TEST_NAME", "")
 cj_token = os.getenv("INPUT_CJ_TOKEN", "")
 instructions = os.getenv("INPUT_INSTRUCTIONS", "")
 
-def run():
-    if not (website and test_name and cj_token and instructions):
-        return "Failed: All required fields were not provided."
+def run() -> tuple[bool, str]:
+    """Business logic for the action.
+
+    Returns:
+        tuple[bool, str]:
+            - The first element says whether the test creation was success or not.
+            - The second element is a message shown in the Github output.
+    """
+    if not (url and test_name and cj_token and instructions):
+        return False, "Failed: All required fields were not provided."
 
     response = requests.post(
         "https://cj-backend.foreai.co/test-case/",
         headers={
             "Authorization": f"Bearer {cj_token}"},
         json = {
-            "website": website,
+            "website": url,
             "name": test_name,
             "description": instructions,
         },
@@ -27,13 +36,14 @@ def run():
 
     if response.status_code == 201:
         # Success: The test case was created successfully
-        return f"Test successfully generated. Visit: https://cj.foreai.co/{response.text}"
-    else:
-        return f"Failed to create test case: {response.json()}"
+        msg = f"Test successfully generated. Visit: https://cj.foreai.co/{response.text}"
+        return True, msg
+    return False, f"Failed to create test case: {response.json()}"
 
-output = run()
+success, output = run()
 
-print(output)
+if not success:
+    sys.exit(output)
 
 # Set the output for the GitHub Action
 with open(os.getenv("GITHUB_OUTPUT"), "a", encoding="utf-8") as fh:
