@@ -40,11 +40,11 @@ def run() -> tuple[bool, str]:
         return True, msg
     return False, f"Failed to create test case: {response.json()}"
 
-success, output = run()
+success, output_msg = run()
 
 if not success:
-    sys.exit(output)
+    sys.exit(output_msg)
 
 # Set the output for the GitHub Action
 with open(os.getenv("GITHUB_OUTPUT"), "a", encoding="utf-8") as fh:
-    print(f"result={output}", file=fh)
+    print(f"result={output_msg}", file=fh)
