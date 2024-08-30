@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run CJ Action
-        uses: foreai-co/cj-action@v1.0.3
+        uses: foreai-co/cj-action@v1.0.4
         with:
           instructions: 'Go to my website and try logging in.'
           url: 'https://staging.my_website.com'
