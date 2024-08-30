@@ -5,8 +5,8 @@ import requests
 # Get input from environment variables
 # These ENV vars are set by github actions based on action.yml
 url = os.getenv("INPUT_URL", "")
-test_name = os.getenv("INPUT_TEST_NAME", "")
-cj_token = os.getenv("INPUT_CJ_TOKEN", "")
+test_name = os.getenv("INPUT_NAME", "")
+cj_token = os.getenv("INPUT_TOKEN", "")
 instructions = os.getenv("INPUT_INSTRUCTIONS", "")
 
 def run() -> tuple[bool, str]:
