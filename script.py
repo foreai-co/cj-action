@@ -22,8 +22,6 @@ def run() -> tuple[bool, str]:
 
     response = requests.post(
         "https://cj-backend.foreai.co/test-case/",
-        headers={
-            "Authorization": f"Bearer {cj_token}"},
         json = {
             "website": url,
             "name": test_name,
@@ -36,7 +34,7 @@ def run() -> tuple[bool, str]:
 
     if response.status_code == 201:
         # Success: The test case was created successfully
-        msg = f"Test successfully generated. Visit: https://cj.foreai.co/{response.text}"
+        msg = f"Test successfully generated. Visit: https://cj.foreai.co/{response.json()}"
         return True, msg
     return False, f"Failed to create test case: {response.json()}"
 
