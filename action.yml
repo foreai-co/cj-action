@@ -8,7 +8,7 @@ inputs:
     required: true
     default: ''
 
-  test-name:
+  name:
     description: 'A unique name to identify the test'
     required: true
     default: ''
@@ -18,7 +18,7 @@ inputs:
     required: true
     default: ''
   
-  cj-token:
+  token:
     description: 'The token required to access the tool'
     required: true
     default: ''
