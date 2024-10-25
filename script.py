@@ -20,12 +20,15 @@ def run() -> tuple[bool, str]:
     if not (test_id and cj_token):
         return False, "Failed: All required fields were not provided."
 
-    response = requests.post(
-        f"https://cj-backend.foreai.co/test-run/{test_id}",
-        headers = {
-            "Authorization": f"Bearer {cj_token}",
-            "Content-Type": "application/json"
-        })
+    headers = {
+        "Authorization": f"Bearer {cj_token}",
+        "Content-Type": "application/json"
+    }
+
+    test_run_ep_stub = "https://cj-backend.foreai.co/test-run"
+
+    response = requests.post(f"{test_run_ep_stub}/{test_id}",
+                             headers=headers)
 
     if response.status_code != 201:
         # Failure: The test run could not be created
@@ -34,17 +37,14 @@ def run() -> tuple[bool, str]:
     test_run_id = response.json()
 
     for _ in range(MAX_FETCHES):
-        run_status_response = requests.get(
-            f"https://cj-backend.foreai.co/test-run/{test_run_id}",
-            headers={
-                "Authorization": f"Bearer {cj_token}",
-                "Content-Type": "application/json"
-            })
-        status = run_status_response.json()["status"]
+        run_status_response = requests.get(f"{test_run_ep_stub}/{test_run_id}",
+                                           headers=headers)
+        run_status_response_json = run_status_response.json()
+        status = run_status_response_json["status"]
         if status == "passed":
             return True, "Test passed!"
         if status == "failed":
-            return False, run_status_response.json()["error_message"]
+            return False, run_status_response_json["error_message"]
         # Wait a few secs.
         time.sleep(10.0)
     return False, "Timed out waiting for test result!"
