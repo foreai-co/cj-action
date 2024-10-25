@@ -1,31 +1,21 @@
 name: 'Critical Journey'
-description: 'A GitHub Action to run a UI test based on user instructions'
+description: 'A GitHub Action to run a Critical Journey UI test'
 author: 'foreai-co'
 
 inputs:
-  url:
-    description: 'URL of the website under test'
-    required: true
-    default: ''
-
-  name:
-    description: 'A unique name to identify the test'
-    required: true
-    default: ''
-
-  instructions:
-    description: 'The instructions to test in natural language'
+  test_id:
+    description: 'ID of the test to be run.'
     required: true
     default: ''
   
   token:
-    description: 'The token required to access the tool'
+    description: 'The token required to access the tool.'
     required: true
     default: ''
 
 outputs:
   result:
-    description: 'A message that includes a URL where the result will be available.'
+    description: 'A message that includes information about the status of the run.'
 
 runs:
   using: 'docker'
