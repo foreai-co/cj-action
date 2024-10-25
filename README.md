@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run CJ Action
-        uses: foreai-co/cj-action@v1.0.5
+        uses: foreai-co/cj-action@v1.0.4
         id: run_cj
         with:
           test_id: 'my-test-id'
