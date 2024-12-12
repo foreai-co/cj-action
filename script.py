@@ -35,9 +35,9 @@ def run() -> tuple[bool, str]:
     if response.status_code != 200:
         return False, f"Failed to login service account: {response.json()}"
 
-    jwt_token = response.text
-
+    jwt_token = response.text.replace('"', "")
     headers = _get_headers(jwt_token)    
+
     response = requests.post(f"{BACKEND_URL}/test-run/{test_id}",
                              headers=headers)
 
