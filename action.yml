@@ -8,8 +8,8 @@ inputs:
     required: true
     default: ''
   
-  token:
-    description: 'The token required to access the tool.'
+  service_account_key:
+    description: 'Key to the service account that will run the test.'
     required: true
     default: ''
 
