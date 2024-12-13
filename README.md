@@ -5,7 +5,7 @@ This GitHub Action runs the critical journey script inside a Docker container.
 ## Inputs
 
 - `test_id`: ID of the test to be run.
-- `token`: Your secret token to access fore ai Critical Journey.
+- `service_account_key`: Your service account key to access fore ai Critical Journey.
 
 ## Outputs
 
@@ -27,7 +27,8 @@ jobs:
         id: run_cj
         with:
           test_id: 'my-test-id'
-          token: ${{ secrets.CRITICAL_JOURNEY_TOKEN }}
+          service_account_key: ${{ secrets.CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY }}
       
       - name: Print CJ Action result
         run: echo "${{ steps.run_cj.outputs.result }}"
+```

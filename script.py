@@ -29,35 +29,36 @@ def run() -> tuple[bool, str]:
     if not (test_id and service_account_key):
         return False, "Failed: All required fields were not provided."
 
-    # Login the serive account
-    response = requests.post(f"{BACKEND_URL}/auth/login_service_account",
-                             headers=_get_headers(service_account_key))
-    if response.status_code != 200:
-        return False, f"Failed to login service account: {response.json()}"
+    # Login the service account
+    with requests.Session() as session:
+        session.headers.update(_get_headers(service_account_key))
+        response = session.post(f"{BACKEND_URL}/auth/login_service_account")
+        if response.status_code != 200:
+            return False, f"Failed to login service account: {response.json()}"
 
-    jwt_token = response.text.replace('"', "")
-    headers = _get_headers(jwt_token)    
+        jwt_token = response.json()
+        session.headers.update(_get_headers(jwt_token))
 
-    response = requests.post(f"{BACKEND_URL}/test-run/{test_id}",
-                             headers=headers)
+        response = session.post(f"{BACKEND_URL}/test-run/{test_id}")
 
-    if response.status_code != 201:
-        # Failure: The test run could not be created
-        return False, f"Failed to create test run: {response.json()}"
+        if response.status_code != 201:
+            # Failure: The test run could not be created
+            return False, f"Failed to create test run: {response.json()}"
 
-    test_run_id = response.json()
+        test_run_id = response.json()
 
-    for _ in range(MAX_FETCHES):
-        run_status_response = requests.get(
-            f"{BACKEND_URL}/test-run/{test_run_id}", headers=headers)
-        run_status_response_json = run_status_response.json()
-        status = run_status_response_json["status"]
-        if status == "passed":
-            return True, "Test passed!"
-        if status == "failed":
-            return False, run_status_response_json["error_message"]
+        for _ in range(MAX_FETCHES):
+            run_status_response = session.get(
+                f"{BACKEND_URL}/test-run/{test_run_id}")
+            run_status_response_json = run_status_response.json()
+            status = run_status_response_json["status"]
+            if status == "passed":
+                return True, "Test passed!"
+            if status == "failed":
+                return False, run_status_response_json["error_message"]
 
-        time.sleep(POLL_EVERY_SECONDS)
+            time.sleep(POLL_EVERY_SECONDS)
+
     return False, "Timed out waiting for test result!"
 
 
