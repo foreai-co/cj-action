@@ -8,6 +8,9 @@ on:
         required: true
         default: ''
 
+permissions:
+  contents: write
+
 jobs:
   create-release:
     name: Create and Push Release
