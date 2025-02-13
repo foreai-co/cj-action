@@ -139,10 +139,11 @@ def _handle_bulk_test_run(session: requests.Session, cid: str) -> tuple[bool, st
                 continue
 
             msg = f"{group_status['passed']} passed, {group_status['failed']} failed."
-            msg += "\nPassed links:\n" + \
-                "\n".join(group_status["passed_links"])
-            msg += "\nFailed links:\n" + \
-                "\n".join(group_status["failed_links"])
+            msg += "%0APassed links:%0A" + \
+                "%0A".join(group_status["passed_links"])
+            msg += "%0AFailed links:%0A" + \
+                "%0A".join(group_status["failed_links"])
+
             return group_status["failed"] == 0, msg
 
         except requests.JSONDecodeError:

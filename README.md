@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Test
-        uses: foreai-co/cj-action@v1.0.7
+        uses: foreai-co/cj-action@v1.0.8
         id: run_cj
         with:
           test_id: 'my-test-id'
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run Test Suite
-        uses: foreai-co/cj-action@v1.0.7
+        uses: foreai-co/cj-action@v1.0.8
         id: run_cj
         with:
           test_suite_id: 'my-test-suite-id'
