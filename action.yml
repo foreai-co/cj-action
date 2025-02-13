@@ -5,7 +5,12 @@ author: 'foreai-co'
 inputs:
   test_id:
     description: 'ID of the test to be run.'
-    required: true
+    required: false
+    default: ''
+  
+  test_suite_id:
+    description: 'ID of the test suite to be run.'
+    required: false
     default: ''
   
   service_account_key:
