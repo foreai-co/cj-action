@@ -77,14 +77,11 @@ def _handle_single_test_run(
     return False, run_status["error_message"]
 
 
-def _make_test_link(test_case_id: str, project_id: str) -> str:
-    return f"https://cj.foreai.co/tests/{project_id}/{test_case_id}"
-
-
-def _get_latest_group_run_statuses(run_response: dict) -> tuple[bool, dict]:
+def _get_latest_group_run_statuses(run_response: dict, cid: str) -> tuple[bool, dict]:
     linked_runs = run_response.get("linked_runs", [])
 
     project_id = run_response.get("test_suite_id")
+    final_link = f"https://cj.foreai.co/collections/{project_id}/{cid}"
 
     if not linked_runs:
         raise ValueError("No linked runs found in the response")
@@ -96,15 +93,11 @@ def _get_latest_group_run_statuses(run_response: dict) -> tuple[bool, dict]:
     latest_runs = [run for run in linked_runs if run["created_at"] == max_time]
 
     # Count passed vs failed
-    status_counts = {"passed": 0, "failed": 0,
-                     "failed_links": [], "passed_links": []}
+    status_counts = {"passed": 0, "failed": 0, "final_link": final_link}
     for latest_run in latest_runs:
-        test_link = _make_test_link(latest_run["test_case_id"], project_id)
         if latest_run["status"] == "passed":
-            status_counts["passed_links"].append(test_link)
             status_counts["passed"] += 1
         if latest_run["status"] == "failed":
-            status_counts["failed_links"].append(test_link)
             status_counts["failed"] += 1
 
     if status_counts["passed"] + status_counts["failed"] != len(latest_runs):
@@ -132,17 +125,14 @@ def _handle_bulk_test_run(session: requests.Session, cid: str) -> tuple[bool, st
         try:
             run_status_json = response.json()
             is_finished, group_status = _get_latest_group_run_statuses(
-                run_status_json)
+                run_status_json, cid)
 
             if not is_finished:
                 time.sleep(POLL_EVERY_SECONDS)
                 continue
 
             msg = f"{group_status['passed']} passed, {group_status['failed']} failed."
-            msg += "%0APassed links:%0A" + \
-                "%0A".join(group_status["passed_links"])
-            msg += "%0AFailed links:%0A" + \
-                "%0A".join(group_status["failed_links"])
+            msg += f" See status here: {group_status['final_link']}"
 
             return group_status["failed"] == 0, msg
 
