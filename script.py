@@ -8,10 +8,8 @@ import requests
 # Get input from environment variables
 # These ENV vars are set by github actions based on action.yml
 test_id = os.getenv("INPUT_TEST_ID", "")
-collection_id = os.getenv("INPUT_TEST_SUITE_ID",
-                          "0713530d-425a-4493-87cb-94bad9b79fb9")
-service_account_key = os.getenv(
-    "INPUT_SERVICE_ACCOUNT_KEY", "31e7bc0376a84f20a009d78b6f44440e")
+collection_id = os.getenv("INPUT_TEST_SUITE_ID", "")
+service_account_key = os.getenv("INPUT_SERVICE_ACCOUNT_KEY", "")
 MAX_FETCHES = 10
 POLL_EVERY_SECONDS = 10.0
 BACKEND_URL = "https://cj-backend.foreai.co"
