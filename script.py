@@ -77,11 +77,11 @@ def _handle_single_test_run(
     return False, run_status["error_message"]
 
 
-def _get_latest_group_run_statuses(run_response: dict, cid: str) -> tuple[bool, dict]:
+def _get_latest_group_run_statuses(run_response: dict, collection_id: str) -> tuple[bool, dict]:
     linked_runs = run_response.get("linked_runs", [])
 
     project_id = run_response.get("test_suite_id")
-    final_link = f"https://cj.foreai.co/collections/{project_id}/{cid}"
+    final_link = f"https://cj.foreai.co/collections/{project_id}/{collection_id}"
 
     if not linked_runs:
         raise ValueError("No linked runs found in the response")
@@ -106,17 +106,17 @@ def _get_latest_group_run_statuses(run_response: dict, cid: str) -> tuple[bool, 
     return True, status_counts
 
 
-def _handle_bulk_test_run(session: requests.Session, cid: str) -> tuple[bool, str]:
+def _handle_bulk_test_run(session: requests.Session, collection_id: str) -> tuple[bool, str]:
     """Handles running a full test suite collection."""
     response = session.post(
-        f"{BACKEND_URL}/test-suites/collection/{cid}/run-all")
+        f"{BACKEND_URL}/test-suites/collection/{collection_id}/run-all")
 
     if response.status_code != 200:
         return False, f"Failed to create test suite run: {response.json()}"
 
     for _ in range(MAX_FETCHES):
         response = session.get(
-            f"{BACKEND_URL}/test-suites/collection/{cid}")
+            f"{BACKEND_URL}/test-suites/collection/{collection_id}")
 
         if response.status_code != 200:
             print(response.json())
@@ -125,7 +125,7 @@ def _handle_bulk_test_run(session: requests.Session, cid: str) -> tuple[bool, st
         try:
             run_status_json = response.json()
             is_finished, group_status = _get_latest_group_run_statuses(
-                run_status_json, cid)
+                run_status_json, collection_id)
 
             if not is_finished:
                 time.sleep(POLL_EVERY_SECONDS)
