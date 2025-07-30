@@ -28,6 +28,22 @@ jobs:
             exit 1
           fi
 
+      - name: Check if the version is already released
+        id: check_release
+        run: |
+          if git tag -l | grep -q ${{ github.event.inputs.version }}; then
+            echo "Error: Version ${{ github.event.inputs.version }} has already been released."
+            exit 1
+          fi
+
+      - name: Check if the version is mentioned in the README.md
+        id: check_readme
+        run: |
+          if ! grep -q ${{ github.event.inputs.version }} README.md; then
+            echo "Error: Version ${{ github.event.inputs.version }} is not mentioned in the README.md."
+            exit 1
+          fi
+
       - name: Create and Push Tag
         id: create_tag
         run: |
