@@ -2,16 +2,21 @@
 import os
 import sys
 import time
+from math import ceil
 
 import requests
 
 # Get input from environment variables
 # These ENV vars are set by github actions based on action.yml
-test_id = os.getenv("INPUT_TEST_ID", "")
-collection_id = os.getenv("INPUT_TEST_SUITE_ID", "")
-service_account_key = os.getenv("INPUT_SERVICE_ACCOUNT_KEY", "")
-MAX_FETCHES = 10
+TEST_ID = os.getenv("INPUT_TEST_ID", "")
+COLLECTION_ID = os.getenv("INPUT_TEST_SUITE_ID", "")
+SERVICE_ACCOUNT_KEY = os.getenv("INPUT_SERVICE_ACCOUNT_KEY", "")
+
+WAIT_TIMEOUT_SECONDS = int(os.getenv("INPUT_WAIT_TIMEOUT_SECONDS", "100"))
+assert 30 <= WAIT_TIMEOUT_SECONDS <= 900, "WAIT_TIMEOUT_SECONDS must be between 30 and 900 seconds"
 POLL_EVERY_SECONDS = 10.0
+MAX_FETCHES = ceil(WAIT_TIMEOUT_SECONDS / POLL_EVERY_SECONDS)
+
 BACKEND_URL = "https://cj-backend.foreai.co"
 
 def _get_headers(token: str) -> dict:
@@ -23,7 +28,7 @@ def _get_headers(token: str) -> dict:
 
 def _login_service_account(session: requests.Session) -> bool:
     """Logs in the service account and updates session headers."""
-    session.headers.update(_get_headers(service_account_key))
+    session.headers.update(_get_headers(SERVICE_ACCOUNT_KEY))
     response = session.post(f"{BACKEND_URL}/auth/login_service_account")
 
     if response.status_code != 200:
@@ -151,7 +156,7 @@ def run() -> tuple[bool, str]:
             - First element: Whether the test run was successful.
             - Second element: Message shown in the GitHub output.
     """
-    if not service_account_key:
+    if not SERVICE_ACCOUNT_KEY:
         return False, "Failed: Service account key should be provided."
 
     session = requests.Session()
@@ -159,13 +164,13 @@ def run() -> tuple[bool, str]:
         if not _login_service_account(session):
             return False, "Failed to login service account."
 
-        if test_id:
-            return _handle_single_test_run(session, test_id)
+        if TEST_ID:
+            return _handle_single_test_run(session, TEST_ID)
 
-        if not collection_id:
+        if not COLLECTION_ID:
             return False, "Failed: Either test_id or test_suite_id should be provided."
 
-        return _handle_bulk_test_run(session, collection_id)
+        return _handle_bulk_test_run(session, COLLECTION_ID)
 
     finally:
         session.close()

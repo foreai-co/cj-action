@@ -18,6 +18,11 @@ inputs:
     required: true
     default: ''
 
+  wait_timeout_seconds:
+    description: 'Maximum number of seconds to wait for the test to complete.'
+    required: false
+    default: '100'
+
 outputs:
   result:
     description: 'A message that includes information about the status of the run.'
