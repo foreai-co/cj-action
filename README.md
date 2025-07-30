@@ -7,7 +7,7 @@ This GitHub Action runs the critical journey script inside a Docker container.
 - `test_id`: ID of the test to be run. Either this or `test_suite_id` should be provided.
 - `test_suite_id`: ID of the test suite to be run.
 - `service_account_key`: Your service account key to access fore ai Critical Journey.
-- `wait_timeout_seconds`: (Optional) Maximum number of seconds to wait for the test to complete. Default is 100 seconds. Must be between 10 and 900 seconds.
+- `wait_timeout_seconds`: (Optional) Maximum number of seconds to wait for the test to complete. Default is 100 seconds. Must be between 30 and 900 seconds (inclusive).
 
 ## Outputs
 

@@ -13,10 +13,9 @@ COLLECTION_ID = os.getenv("INPUT_TEST_SUITE_ID", "")
 SERVICE_ACCOUNT_KEY = os.getenv("INPUT_SERVICE_ACCOUNT_KEY", "")
 
 WAIT_TIMEOUT_SECONDS = int(os.getenv("INPUT_WAIT_TIMEOUT_SECONDS", "100"))
-assert 10 < WAIT_TIMEOUT_SECONDS < 900, "WAIT_TIMEOUT_SECONDS must be between 10 and 900 seconds"
+assert 30 <= WAIT_TIMEOUT_SECONDS <= 900, "WAIT_TIMEOUT_SECONDS must be between 30 and 900 seconds"
 POLL_EVERY_SECONDS = 10.0
-# If 10 seconds is set, we need to fetch at least 2 times
-MAX_FETCHES = max(2, ceil(WAIT_TIMEOUT_SECONDS / POLL_EVERY_SECONDS))
+MAX_FETCHES = ceil(WAIT_TIMEOUT_SECONDS / POLL_EVERY_SECONDS)
 
 BACKEND_URL = "https://cj-backend.foreai.co"
 
