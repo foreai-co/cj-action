@@ -1,4 +1,5 @@
 """This script is the entry point for the Github action."""
+import json
 import os
 import sys
 import time
@@ -11,6 +12,8 @@ import requests
 TEST_ID = os.getenv("INPUT_TEST_ID", "")
 COLLECTION_ID = os.getenv("INPUT_TEST_SUITE_ID", "")
 SERVICE_ACCOUNT_KEY = os.getenv("INPUT_SERVICE_ACCOUNT_KEY", "")
+WEBSITE_URL_OVERRIDE = os.getenv("INPUT_WEBSITE_URL_OVERRIDE", "")
+PARAMS_OVERRIDE = os.getenv("INPUT_PARAMS_OVERRIDE", "")
 
 WAIT_TIMEOUT_SECONDS = int(os.getenv("INPUT_WAIT_TIMEOUT_SECONDS", "100"))
 assert 30 <= WAIT_TIMEOUT_SECONDS <= 900, "WAIT_TIMEOUT_SECONDS must be between 30 and 900 seconds"
@@ -25,6 +28,14 @@ def _get_headers(token: str) -> dict:
         "Content-Type": "application/json"
     }
 
+def _create_run_settings_from_env() -> dict:
+    """Creates run settings from environment variables."""
+    run_settings = {}
+    if WEBSITE_URL_OVERRIDE:
+        run_settings["website_url_override"] = WEBSITE_URL_OVERRIDE
+    if PARAMS_OVERRIDE:
+        run_settings["parameter_overrides"] = json.loads(PARAMS_OVERRIDE)
+    return run_settings
 
 def _login_service_account(session: requests.Session) -> bool:
     """Logs in the service account and updates session headers."""
@@ -63,9 +74,9 @@ def _poll_for_status(session: requests.Session, url: str) -> dict | None:
 
 
 def _handle_single_test_run(
-        session: requests.Session, test_case_id: str) -> tuple[bool, str]:
+        session: requests.Session, test_case_id: str, run_settings: dict) -> tuple[bool, str]:
     """Handles running a single test case."""
-    response = session.post(f"{BACKEND_URL}/test-run/{test_case_id}")
+    response = session.post(f"{BACKEND_URL}/test-run/{test_case_id}", json=run_settings)
 
     if response.status_code != 201:
         return False, f"Failed to create test run: {response.json()}"
@@ -111,10 +122,12 @@ def _get_latest_group_run_statuses(run_response: dict, collection_id: str) -> tu
     return True, status_counts
 
 
-def _handle_bulk_test_run(session: requests.Session, collection_id: str) -> tuple[bool, str]:
+def _handle_bulk_test_run(
+        session: requests.Session, collection_id: str, run_settings: dict) -> tuple[bool, str]:
     """Handles running a full test suite collection."""
     response = session.post(
-        f"{BACKEND_URL}/test-suites/collection/{collection_id}/run-all")
+        f"{BACKEND_URL}/test-suites/collection/{collection_id}/run-all",
+        json=run_settings)
 
     if response.status_code != 200:
         return False, f"Failed to create test suite run: {response.json()}"
@@ -160,17 +173,18 @@ def run() -> tuple[bool, str]:
         return False, "Failed: Service account key should be provided."
 
     session = requests.Session()
+    run_settings = _create_run_settings_from_env()
     try:
         if not _login_service_account(session):
             return False, "Failed to login service account."
 
         if TEST_ID:
-            return _handle_single_test_run(session, TEST_ID)
+            return _handle_single_test_run(session, TEST_ID, run_settings)
 
         if not COLLECTION_ID:
             return False, "Failed: Either test_id or test_suite_id should be provided."
 
-        return _handle_bulk_test_run(session, COLLECTION_ID)
+        return _handle_bulk_test_run(session, COLLECTION_ID, run_settings)
 
     finally:
         session.close()
