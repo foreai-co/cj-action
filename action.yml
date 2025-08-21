@@ -21,7 +21,7 @@ inputs:
   wait_timeout_seconds:
     description: 'Maximum number of seconds to wait for the test to complete.'
     required: false
-    default: '100'
+    default: '300'
 
 outputs:
   result:
