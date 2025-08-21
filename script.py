@@ -145,7 +145,7 @@ def _handle_bulk_test_run(session: requests.Session, collection_id: str) -> tupl
             time.sleep(POLL_EVERY_SECONDS)
             continue
 
-    return False, "Timed out waiting for test suite result!"
+    return False, "Timed out waiting for test suite result."
 
 
 def run() -> tuple[bool, str]:
