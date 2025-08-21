@@ -49,23 +49,23 @@ jobs:
           python -m pip install pytest requests
           python -m pytest runner_test.py
 
-      - name: Create and Push Tag
-        id: create_tag
-        run: |
-          # Create the Git tag
-          git tag ${{ github.event.inputs.version }}
-          git push origin ${{ github.event.inputs.version }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Create and Push Tag
+      #   id: create_tag
+      #   run: |
+      #     # Create the Git tag
+      #     git tag ${{ github.event.inputs.version }}
+      #     git push origin ${{ github.event.inputs.version }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ github.event.inputs.version }}
-          release_name: Release ${{ github.event.inputs.version }}
-          body: |
-            This release was manually triggered using GitHub Actions.
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Create GitHub Release
+      #   uses: actions/create-release@v1
+      #   with:
+      #     tag_name: ${{ github.event.inputs.version }}
+      #     release_name: Release ${{ github.event.inputs.version }}
+      #     body: |
+      #       This release was manually triggered using GitHub Actions.
+      #     draft: false
+      #     prerelease: false
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
