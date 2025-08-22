@@ -39,3 +39,5 @@ jobs:
           # Use the GITHUB_TOKEN to perform the force push
           git tag -fa $MAJOR -m "Update $MAJOR to $VERSION"
           git push origin $MAJOR --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
