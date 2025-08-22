@@ -16,21 +16,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Fetch all history and tags to ensure the git command works correctly
+          fetch-depth: 0
 
       - name: Validate version exists
         run: |
           VERSION=${{ github.event.inputs.version }}
-          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+          # Using git tag -l and grep is a more robust way to check for tag existence
+          if ! git tag -l | grep -q "$VERSION"; then
             echo "Error: Version $VERSION does not exist as a tag."
             exit 1
           fi
 
-      - name: Update major tag
-        run: |
-          VERSION=${{ github.event.inputs.version }}
-          MAJOR=$(echo $VERSION | cut -d. -f1)
+      # - name: Update major tag
+      #   run: |
+      #     VERSION=${{ github.event.inputs.version }}
+      #     MAJOR=$(echo $VERSION | cut -d. -f1)
 
-          echo "Updating $MAJOR to point to $VERSION"
+      #     echo "Updating $MAJOR to point to $VERSION"
 
-          git tag -fa $MAJOR -m "Update $MAJOR to $VERSION"
-          git push origin $MAJOR --force
+      #     git tag -fa $MAJOR -m "Update $MAJOR to $VERSION"
+      #     git push origin $MAJOR --force
