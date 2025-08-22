@@ -36,13 +36,10 @@ jobs:
             exit 1
           fi
 
-      - name: Check if the version is mentioned in the README.md
-        id: check_readme
+      - name: Run unit tests
         run: |
-          if ! grep -q ${{ github.event.inputs.version }} README.md; then
-            echo "Error: Version ${{ github.event.inputs.version }} is not mentioned in the README.md."
-            exit 1
-          fi
+          python -m pip install pytest requests
+          python -m pytest runner_test.py
 
       - name: Create and Push Tag
         id: create_tag

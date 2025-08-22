@@ -23,6 +23,16 @@ inputs:
     required: false
     default: '300'
 
+  website_url_override:
+    description: 'Override the website URL for the test.'
+    required: false
+    default: ''
+  
+  params_override:
+    description: 'Override the params for the test. Must be a valid JSON string.'
+    required: false
+    default: ''
+
 outputs:
   result:
     description: 'A message that includes information about the status of the run.'
