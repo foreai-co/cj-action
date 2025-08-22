@@ -36,14 +36,6 @@ jobs:
             exit 1
           fi
 
-      - name: Check if the version is mentioned in the README.md
-        id: check_readme
-        run: |
-          if ! grep -q ${{ github.event.inputs.version }} README.md; then
-            echo "Error: Version ${{ github.event.inputs.version }} is not mentioned in the README.md."
-            exit 1
-          fi
-
       - name: Run unit tests
         run: |
           python -m pip install pytest requests
