@@ -16,11 +16,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Fetch all history and tags to ensure the git command works correctly
+          fetch-depth: 0
 
       - name: Validate version exists
         run: |
           VERSION=${{ github.event.inputs.version }}
-          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+          # Using git tag -l and grep is a more robust way to check for tag existence
+          if ! git tag -l | grep -q "$VERSION"; then
             echo "Error: Version $VERSION does not exist as a tag."
             exit 1
           fi
@@ -32,5 +36,13 @@ jobs:
 
           echo "Updating $MAJOR to point to $VERSION"
 
+          # The runner environment does not have a default Git identity.
+          # These commands set a generic user and email so git can create the tag.
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          # Use the GITHUB_TOKEN to perform the force push
           git tag -fa $MAJOR -m "Update $MAJOR to $VERSION"
           git push origin $MAJOR --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
