@@ -1,0 +1,36 @@
+name: Update Major Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing release version to update major tag (e.g., v1.2.3)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  update-major-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate version exists
+        run: |
+          VERSION=${{ github.event.inputs.version }}
+          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Error: Version $VERSION does not exist as a tag."
+            exit 1
+          fi
+
+      - name: Update major tag
+        run: |
+          VERSION=${{ github.event.inputs.version }}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+
+          echo "Updating $MAJOR to point to $VERSION"
+
+          git tag -fa $MAJOR -m "Update $MAJOR to $VERSION"
+          git push origin $MAJOR --force
