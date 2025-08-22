@@ -36,6 +36,11 @@ jobs:
 
           echo "Updating $MAJOR to point to $VERSION"
 
+          # The runner environment does not have a default Git identity.
+          # These commands set a generic user and email so git can create the tag.
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
           # Use the GITHUB_TOKEN to perform the force push
           git tag -fa $MAJOR -m "Update $MAJOR to $VERSION"
           git push origin $MAJOR --force
