@@ -10,12 +10,18 @@ import runner as runner_module
 class RunnerTests(unittest.TestCase):
     """Tests for the runner module."""
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """Fetch the OpenAPI spec once for all tests."""
         # Load OpenAPI spec for the backend.
         response = requests.get(f"{runner_module.BACKEND_URL}/openapi.json", timeout=10)
         response.raise_for_status()
-        self.openapi_spec = response.json()
+        cls.openapi_spec = response.json()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up the OpenAPI spec."""
+        cls.openapi_spec = None
 
     def test_run_settings_with_invalid_json(self):
         """Test that the runner module returns an error when the params_override is invalid JSON."""

@@ -167,7 +167,10 @@ def _handle_bulk_test_run(
         try:
             run_status_json = response.json()
             is_finished, group_status = _get_latest_group_run_statuses(
-                run_status_json, collection_id, created_at)
+                run_response=run_status_json,
+                collection_id=collection_id,
+                created_at=created_at,
+            )
 
             if not is_finished:
                 time.sleep(poll_every_seconds)
@@ -220,13 +223,23 @@ def run(session: requests.Session) -> tuple[bool, str]:
 
         if test_id:
             return _handle_single_test_run(
-                session, test_id, run_settings, max_fetches, poll_every_seconds)
+                session=session,
+                test_case_id=test_id,
+                run_settings=run_settings,
+                max_fetches=max_fetches,
+                poll_every_seconds=poll_every_seconds,
+            )
 
         if not collection_id:
             return False, "Failed: Either test_id or test_suite_id should be provided."
 
         return _handle_bulk_test_run(
-            session, collection_id, run_settings, max_fetches, poll_every_seconds)
+            session=session,
+            collection_id=collection_id,
+            run_settings=run_settings,
+            max_fetches=max_fetches,
+            poll_every_seconds=poll_every_seconds,
+        )
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         return False, f"Failed: {e}"
