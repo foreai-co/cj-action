@@ -1,5 +1,4 @@
 """Unittest version of tests for the runner module."""
-import importlib
 import os
 import unittest
 from unittest.mock import patch
@@ -206,7 +205,11 @@ class RunnerTests(unittest.TestCase):
                     result, msg = runner_module.run(session)
                     self.assertFalse(result)
                     self.assertIn("1 passed, 1 failed", msg)
-                    self.assertIn("https://cj.foreai.co/collections/project-id/collection-id", msg)
+                    self.assertIn(
+                        "https://cj.foreai.co/collections/project-id/"
+                        "collection-id?created_at=2025-01-01T00:00:00.000000Z",
+                        msg,
+                    )
 
 
 if __name__ == "__main__":
