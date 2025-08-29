@@ -27,6 +27,9 @@ def _create_run_settings_from_env() -> dict:
             run_settings["parameter_overrides"] = json.loads(params_override)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in params_override: {e}") from e
+    browser_type_override = os.getenv("INPUT_BROWSER_TYPE_OVERRIDE", "")
+    if browser_type_override:
+        run_settings["browser_type_override"] = browser_type_override.lower()
     return run_settings
 
 def _login_service_account(session: requests.Session, service_account_key: str) -> bool:

@@ -125,6 +125,7 @@ class RunnerTests(unittest.TestCase):
             "INPUT_TEST_ID": "test-case-id",
             "INPUT_WEBSITE_URL_OVERRIDE": "https://example.com",
             "INPUT_PARAMS_OVERRIDE": '{"foo": "bar"}',
+            "INPUT_BROWSER_TYPE_OVERRIDE": "firefox",
         }, clear=True):
             with patch.object(session, "post", side_effect=fake_post):
                 with patch.object(session, "get", side_effect=fake_get):
@@ -205,6 +206,7 @@ class RunnerTests(unittest.TestCase):
             "INPUT_TEST_SUITE_ID": "collection-id",
             "INPUT_WEBSITE_URL_OVERRIDE": "https://example.com",
             "INPUT_PARAMS_OVERRIDE": '{"foo": "bar"}',
+            "INPUT_BROWSER_TYPE_OVERRIDE": "firefox",
         }, clear=True):
             with patch.object(session, "post", side_effect=fake_post):
                 with patch.object(session, "get", side_effect=fake_get):
