@@ -33,6 +33,11 @@ inputs:
     required: false
     default: ''
 
+  browser_type_override:
+    description: 'Browser type to use for the test: chromium, firefox, or webkit. Defaults to chromium'
+    required: false
+    default: ''
+
 outputs:
   result:
     description: 'A message that includes information about the status of the run.'
