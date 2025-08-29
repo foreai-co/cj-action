@@ -34,7 +34,7 @@ inputs:
     default: ''
 
   browser_type_override:
-    description: 'Browser to use for the test: chrome, firefox, or webkit.'
+    description: 'Browser type to use for the test: chromium, firefox, or webkit.'
     required: false
     default: 'chrome'
 
