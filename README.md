@@ -60,6 +60,7 @@ jobs:
           website_url_override: 'https://beta-dev.my-awesome.com/2'
           # Override test parameters using this optional field. Provide valid json string.
           params_override: '{ "param1" : "value1", "param2" : "value2" }'
+
       - name: Print result
         run: echo "${{ steps.run_cj.outputs.result }}"
 ```
