@@ -10,7 +10,7 @@ This GitHub Action runs the critical journey script inside a Docker container.
 - `wait_timeout_seconds`: (Optional) Maximum number of seconds to wait for the test to complete. Default is 300 seconds. Must be between 30 and 900 seconds (inclusive).
 - `website_url_override`: (Optional) Allows overriding the base website URL used during test execution.  
 - `params_override`: (Optional) Allows overriding default parameter values defined in the test suite, so that tests can be run with custom parameter values. This should be a valid json string and all keys and values are also strings.
-- `browser_type_override`: (Optional) Browser to use for the test: 'chromium', 'firefox', or 'webkit'. Default is 'chromium'.
+- `browser_type_override`: (Optional) Browser engine to run the test with: 'chromium', 'firefox', or 'webkit'. Defaults to 'chromium' if not specified.
 
 ## Outputs
 
