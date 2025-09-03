@@ -1,0 +1,7 @@
+# This is a pipeline that will automatically send PRs to update project dependancies.
+version: 2
+updates:
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
