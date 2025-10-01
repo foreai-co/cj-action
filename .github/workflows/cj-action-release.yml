@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        
+      - name: Print version
+        run: echo "Creating release for version:${{ github.event.inputs.version }}"
 
       - name: Validate Version
         id: validate_version
