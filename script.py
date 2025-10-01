@@ -10,9 +10,9 @@ import runner
 session = requests.Session()
 success, output_msg = runner.run(session)
 
-if not success:
-    sys.exit(output_msg)
-
-# Set the output for the GitHub Action
+# Set the output for the GitHub Action - even for failures.
 with open(os.getenv("GITHUB_OUTPUT"), "a", encoding="utf-8") as fh:
     print(f"result={output_msg}", file=fh)
+
+if not success:
+    sys.exit(output_msg)
