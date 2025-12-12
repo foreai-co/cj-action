@@ -110,7 +110,7 @@ def _get_latest_group_run_statuses(
     linked_runs = run_response.get("linked_runs", [])
 
     project_id = run_response.get("test_suite_id")
-    final_link = f"https://cj.foreai.co/collections/{project_id}/{collection_id}"
+    final_link = f"https://app.foreai.co/collections/{project_id}/{collection_id}"
     final_link += f"?created_at={created_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')}"
 
     if not linked_runs:

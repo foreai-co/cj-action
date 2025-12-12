@@ -214,7 +214,7 @@ class RunnerTests(unittest.TestCase):
                     self.assertFalse(result)
                     self.assertIn("1 passed, 1 failed", msg)
                     self.assertIn(
-                        "https://cj.foreai.co/collections/project-id/"
+                        "https://app.foreai.co/collections/project-id/"
                         "collection-id?created_at=2025-01-01T00:00:00.000000Z",
                         msg,
                     )
