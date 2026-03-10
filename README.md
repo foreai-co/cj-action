@@ -11,6 +11,7 @@ This GitHub Action runs the critical journey script inside a Docker container.
 - `website_url_override`: (Optional) Allows overriding the base website URL used during test execution.  
 - `params_override`: (Optional) Allows overriding default parameter values defined in the test suite, so that tests can be run with custom parameter values. This should be a valid json string and all keys and values are also strings.
 - `browser_type_override`: (Optional) Browser engine to run the test with: 'chromium', 'firefox', or 'webkit'. Defaults to 'chromium' if not specified.
+- `create_issue_on_failure`: (Optional) If `true`, automatically creates a GitHub issue when the test run fails. The issue includes step traces, error details, test configuration, and a screenshot from the last executed step. Requires `GITHUB_TOKEN` to be available. Default is `false`.
 
 ## Outputs
 
@@ -60,6 +61,35 @@ jobs:
           website_url_override: 'https://beta-dev.my-awesome.com/2'
           # Override test parameters using this optional field. Provide valid json string.
           params_override: '{ "param1" : "value1", "param2" : "value2" }'
+
+      - name: Print result
+        run: echo "${{ steps.run_cj.outputs.result }}"
+```
+
+## Example Usage with automatic GitHub issue creation on failure
+
+When `create_issue_on_failure` is enabled, the action uses the default `GITHUB_TOKEN` provided automatically by GitHub Actions — no manual secret configuration required. If your repository uses restrictive default permissions, add `issues: write` to the job permissions.
+
+```yaml
+name: Run CJ Github Action
+
+on: [push]
+
+jobs:
+  my-job:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write  # Required to create GitHub issues on failure
+    steps:
+      - name: Run Test Suite
+        uses: foreai-co/cj-action@v1
+        id: run_cj
+        with:
+          test_suite_id: 'my-test-suite-id'
+          service_account_key: ${{ secrets.CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY }}
+          create_issue_on_failure: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Print result
         run: echo "${{ steps.run_cj.outputs.result }}"
