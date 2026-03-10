@@ -8,7 +8,7 @@ WORKDIR /app
 COPY  . /app
 
 # Install required packages
-RUN pip install requests
+RUN pip install requests PyGithub
 
 # Make the script executable
 RUN chmod +x /app/script.py
