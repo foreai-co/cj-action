@@ -13,8 +13,7 @@ with requests.Session() as session:
 
     if (not success and failed_run_ids and
         os.getenv("INPUT_CREATE_ISSUE_ON_FAILURE", "false").lower() == "true"):
-        for failed_run_id in failed_run_ids:
-            github_utils.create_github_issue_for_run(session, failed_run_id)
+        github_utils.create_github_issues_for_runs(session, failed_run_ids)
 
 
 def escape_github_output(value: str) -> str:
