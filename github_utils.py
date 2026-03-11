@@ -18,22 +18,36 @@ def _fetch_run_details(session: requests.Session, test_run_id: str) -> dict | No
         return None
 
 
-def _fetch_screenshot_b64(
-    session: requests.Session,
-    test_run_id: str,
-    image_id: str
-) -> str | None:
-    """Fetches the last-step screenshot and returns it as a base64 string."""
-    response = session.get(
-        f"{BACKEND_URL}/images/run/{test_run_id}/{image_id}")
-    if response.status_code != 200:
-        return None
-    return base64.b64encode(response.content).decode("utf-8")
+def _image_url_to_markdown(session: requests.Session, url: str, alt_text="Trace Image"):
+    """Fetches an image from a URL, encodes it in Base64, and returns a Markdown string."""
+    try:
+        # 1. Fetch the image data.
+        response = session.get(url)
+        response.raise_for_status()
 
+        # 2. Encode to Base64
+        image_base64 = base64.b64encode(response.content).decode('utf-8')
+
+        def _get_extension_from_url(url: str) -> str:
+            if "jpeg" in url.lower() or "jpg" in url.lower():
+                return "jpeg"
+            elif ".png" in url.lower():
+                return "png"
+            else:
+                raise ValueError("Unsupported image format in URL")
+
+        extension = _get_extension_from_url(url)
+
+        # 3. Create the Markdown string
+        # We use image/jpeg because your URL ends in .jpg
+        return f"![{alt_text}](data:image/{extension};base64,{image_base64})"
+
+    except Exception:
+        # Fail silently and return empty string if any step fails.
+        return ""
 
 def _build_screenshot_markdown(
     session: requests.Session,
-    test_run_id: str,
     steps: list
 ) -> str:
     """Returns a markdown screenshot block from the last step, or empty string."""
@@ -43,12 +57,16 @@ def _build_screenshot_markdown(
     image_id = trace[0].get("screenshot_id") if trace else None
     if not image_id:
         return ""
-    b64 = _fetch_screenshot_b64(session, test_run_id, image_id)
-    if not b64:
+    response = session.get(f"{BACKEND_URL}/images/run/{image_id}")
+    if response.status_code != 200:
+        return ""
+    url = response.text.strip('"')  # API returns URL as a quoted string
+    image_markdown = _image_url_to_markdown(session, url)
+    if not image_markdown:
         return ""
     return (
         "\n\n### Screenshot\n\n"
-        f"![Last Step Screenshot](data:image/png;base64,{b64})\n"
+        f"{image_markdown}"
     )
 
 
@@ -196,6 +214,6 @@ def create_github_issue_for_run(session: requests.Session, test_run_id: str) -> 
         branch=branch,
         run_url=run_url,
         steps_md=_build_steps_markdown(steps),
-        screenshot_markdown=_build_screenshot_markdown(session, test_run_id, steps),
+        screenshot_markdown=_build_screenshot_markdown(session, steps),
     )
     _post_github_issue(github_token, github_repository, issue_title, issue_body)
