@@ -130,7 +130,7 @@ def _get_latest_group_run_statuses(
             status_counts["passed"] += 1
         if target_run["status"] == "failed":
             status_counts["failed"] += 1
-            status_counts["failed_run_ids"].append(target_run["id"])
+            status_counts["failed_run_ids"].append(target_run["_id"])
 
     if status_counts["passed"] + status_counts["failed"] != len(target_runs):
         return False, status_counts
