@@ -18,11 +18,14 @@ def _fetch_run_details(session: requests.Session, test_run_id: str) -> dict | No
         return None
 
 
-def _image_url_to_markdown(session: requests.Session, url: str, alt_text="Trace Image"):
+def _image_url_to_markdown(url: str, alt_text="Trace Image"):
     """Fetches an image from a URL, encodes it in Base64, and returns a Markdown string."""
     try:
         # 1. Fetch the image data.
-        response = session.get(url)
+        # We cannot reuse the session here because the image URL may be a pre-signed URL that
+        # requires no auth headers, and the session would include auth headers. So we use a direct
+        # requests.get call without the session.
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
 
         # 2. Encode to Base64
@@ -39,7 +42,6 @@ def _image_url_to_markdown(session: requests.Session, url: str, alt_text="Trace 
         extension = _get_extension_from_url(url)
 
         # 3. Create the Markdown string
-        # We use image/jpeg because your URL ends in .jpg
         return f"![{alt_text}](data:image/{extension};base64,{image_base64})"
 
     except Exception:
@@ -61,7 +63,7 @@ def _build_screenshot_markdown(
     if response.status_code != 200:
         return ""
     url = response.text.strip('"')  # API returns URL as a quoted string
-    image_markdown = _image_url_to_markdown(session, url)
+    image_markdown = _image_url_to_markdown(url)
     if not image_markdown:
         return ""
     return (
