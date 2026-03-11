@@ -1,7 +1,6 @@
 """Utilities for creating GitHub issues from test run failures."""
 import base64
 import os
-import uuid
 
 import requests
 
@@ -9,30 +8,26 @@ from runner import BACKEND_URL
 
 
 def _make_screenshot_branch_name() -> str:
-    return f"foreai-screenshot-{uuid.uuid4().hex[:12]}"
+    return "foreai-run-screenshots"
 
 
 def _create_branch(github_token: str, repo: str, branch_name: str, sha: str) -> None:
-    """Create a branch from the given SHA."""
-    requests.post(
-        f"https://api.github.com/repos/{repo}/git/refs",
-        headers={
-            "Authorization": f"Bearer {github_token}",
-            "Accept": "application/vnd.github+json",
-        },
-        json={"ref": f"refs/heads/{branch_name}", "sha": sha},
+    """Create a branch from the given SHA if it doesn't exist."""
+    headers = {
+        "Authorization": f"Bearer {github_token}",
+        "Accept": "application/vnd.github+json",
+    }
+    resp = requests.get(
+        f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}",
+        headers=headers,
         timeout=10,
     )
-
-
-def _delete_branch(github_token: str, repo: str, branch_name: str) -> None:
-    """Delete a branch."""
-    requests.delete(
-        f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}",
-        headers={
-            "Authorization": f"Bearer {github_token}",
-            "Accept": "application/vnd.github+json",
-        },
+    if resp.status_code == 200:
+        return
+    requests.post(
+        f"https://api.github.com/repos/{repo}/git/refs",
+        headers=headers,
+        json={"ref": f"refs/heads/{branch_name}", "sha": sha},
         timeout=10,
     )
 
@@ -312,11 +307,8 @@ def create_github_issues_for_runs(session: requests.Session, failed_run_ids: lis
 
     screenshot_branch = _make_screenshot_branch_name()
     _create_branch(github_token, github_repository, screenshot_branch, github_sha)
-    try:
-        for test_run_id in failed_run_ids:
-            _create_github_issue_for_run(
-                session, test_run_id, github_token, github_repository, screenshot_branch,
-                github_sha, github_ref, github_run_id, github_server_url,
-            )
-    finally:
-        _delete_branch(github_token, github_repository, screenshot_branch)
+    for test_run_id in failed_run_ids:
+        _create_github_issue_for_run(
+            session, test_run_id, github_token, github_repository, screenshot_branch,
+            github_sha, github_ref, github_run_id, github_server_url,
+        )

@@ -8,6 +8,25 @@ import requests
 import github_utils as github_utils_module
 
 
+class CreateBranchTests(unittest.TestCase):
+    def test_skips_post_if_branch_exists(self):
+        with patch("github_utils.requests.get") as mock_get, \
+             patch("github_utils.requests.post") as mock_post:
+            mock_get.return_value.status_code = 200
+            github_utils_module._create_branch("tok", "org/repo", "my-branch", "abc123")
+            mock_post.assert_not_called()
+
+    def test_creates_branch_if_not_exists(self):
+        with patch("github_utils.requests.get") as mock_get, \
+             patch("github_utils.requests.post") as mock_post:
+            mock_get.return_value.status_code = 404
+            github_utils_module._create_branch("tok", "org/repo", "my-branch", "abc123")
+            mock_post.assert_called_once()
+            _, kwargs = mock_post.call_args
+            self.assertEqual(kwargs["json"]["ref"], "refs/heads/my-branch")
+            self.assertEqual(kwargs["json"]["sha"], "abc123")
+
+
 class BuildStepsMarkdownTests(unittest.TestCase):
     def test_empty_steps(self):
         result = github_utils_module._build_steps_markdown([])
@@ -228,43 +247,6 @@ class CreateGithubIssuesForRunsTests(unittest.TestCase):
                 mock_print.assert_called_once_with(
                     "Warning: GITHUB_SHA is not set; cannot create screenshot branch.")
 
-    def test_creates_and_deletes_screenshot_branch(self):
-        session = requests.Session()
-        env = {
-            "GITHUB_TOKEN": "tok",
-            "GITHUB_REPOSITORY": "org/repo",
-            "GITHUB_SHA": "abc1234",
-        }
-        with patch.dict(os.environ, env, clear=True):
-            with patch.object(github_utils_module, "_create_branch") as mock_create:
-                with patch.object(github_utils_module, "_delete_branch") as mock_delete:
-                    with patch.object(
-                        github_utils_module, "_create_github_issue_for_run"
-                    ):
-                        github_utils_module.create_github_issues_for_runs(session, ["r1"])
-            mock_create.assert_called_once()
-            mock_delete.assert_called_once()
-
-    def test_deletes_branch_even_on_exception(self):
-        session = requests.Session()
-        env = {
-            "GITHUB_TOKEN": "tok",
-            "GITHUB_REPOSITORY": "org/repo",
-            "GITHUB_SHA": "abc1234",
-        }
-        with patch.dict(os.environ, env, clear=True):
-            with patch.object(github_utils_module, "_create_branch"):
-                with patch.object(github_utils_module, "_delete_branch") as mock_delete:
-                    with patch.object(
-                        github_utils_module,
-                        "_create_github_issue_for_run",
-                        side_effect=RuntimeError("boom"),
-                    ):
-                        with self.assertRaises(RuntimeError):
-                            github_utils_module.create_github_issues_for_runs(
-                                session, ["r1"])
-            mock_delete.assert_called_once()
-
     def test_calls_create_issue_for_each_run(self):
         session = requests.Session()
         env = {
@@ -274,12 +256,11 @@ class CreateGithubIssuesForRunsTests(unittest.TestCase):
         }
         with patch.dict(os.environ, env, clear=True):
             with patch.object(github_utils_module, "_create_branch"):
-                with patch.object(github_utils_module, "_delete_branch"):
-                    with patch.object(
-                        github_utils_module, "_create_github_issue_for_run"
-                    ) as mock_create_issue:
-                        github_utils_module.create_github_issues_for_runs(
-                            session, ["r1", "r2", "r3"])
+                with patch.object(
+                    github_utils_module, "_create_github_issue_for_run"
+                ) as mock_create_issue:
+                    github_utils_module.create_github_issues_for_runs(
+                        session, ["r1", "r2", "r3"])
         self.assertEqual(mock_create_issue.call_count, 3)
         called_run_ids = [call.args[1] for call in mock_create_issue.call_args_list]
         self.assertEqual(called_run_ids, ["r1", "r2", "r3"])
