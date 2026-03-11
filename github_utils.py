@@ -17,37 +17,6 @@ def _fetch_run_details(session: requests.Session, test_run_id: str) -> dict | No
     except requests.JSONDecodeError:
         return None
 
-
-def _image_url_to_markdown(url: str, alt_text="Trace Image"):
-    """Fetches an image from a URL, encodes it in Base64, and returns a Markdown string."""
-    try:
-        # 1. Fetch the image data.
-        # We cannot reuse the session here because the image URL may be a pre-signed URL that
-        # requires no auth headers, and the session would include auth headers. So we use a direct
-        # requests.get call without the session.
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-
-        # 2. Encode to Base64
-        image_base64 = base64.b64encode(response.content).decode('utf-8')
-
-        def _get_extension_from_url(url: str) -> str:
-            if "jpeg" in url.lower() or "jpg" in url.lower():
-                return "jpeg"
-            elif ".png" in url.lower():
-                return "png"
-            else:
-                raise ValueError("Unsupported image format in URL")
-
-        extension = _get_extension_from_url(url)
-
-        # 3. Create the Markdown string
-        return f"![{alt_text}](data:image/{extension};base64,{image_base64})"
-
-    except Exception:
-        # Fail silently and return empty string if any step fails.
-        return ""
-
 def _build_screenshot_markdown(
     session: requests.Session,
     steps: list
@@ -63,14 +32,12 @@ def _build_screenshot_markdown(
     if response.status_code != 200:
         return ""
     url = response.text.strip('"')  # API returns URL as a quoted string
-    image_markdown = _image_url_to_markdown(url)
-    if not image_markdown:
+    if not url:
         return ""
     return (
         "\n\n### Screenshot\n\n"
-        f"{image_markdown}"
+        f"![Screenshot]({url})"
     )
-
 
 def _build_steps_markdown(steps: list) -> str:
     """Returns a markdown list of executed steps."""
