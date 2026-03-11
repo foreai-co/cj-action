@@ -35,8 +35,8 @@ def _build_screenshot_markdown(
     if not url:
         return ""
     return (
-        "\n\n### Screenshot\n\n"
-        f"![Screenshot]({url})"
+        "\n\n"
+        f"[Screenshot from failing step]({url})"
     )
 
 def _build_steps_markdown(steps: list) -> str:
