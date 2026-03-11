@@ -4,15 +4,29 @@ import sys
 
 import requests
 
+import github_utils
 import runner
 
 
-session = requests.Session()
-success, output_msg = runner.run(session)
+with requests.Session() as session:
+    success, output_msg, failed_run_ids = runner.run(session)
+
+    if (not success and failed_run_ids and
+        os.getenv("INPUT_CREATE_ISSUE_ON_FAILURE", "false").lower() == "true"):
+        for failed_run_id in failed_run_ids:
+            github_utils.create_github_issue_for_run(session, failed_run_id)
+
+
+def escape_github_output(value: str) -> str:
+    """Escape special characters for GitHub Actions output."""
+    value = value.replace("%", "%25")
+    value = value.replace("\r", "%0D")
+    value = value.replace("\n", "%0A")
+    return value
 
 # Set the output for the GitHub Action - even for failures.
 with open(os.getenv("GITHUB_OUTPUT"), "a", encoding="utf-8") as fh:
-    print(f"result={output_msg}", file=fh)
+    print(f"result={escape_github_output(output_msg)}", file=fh)
 
 if not success:
     sys.exit(output_msg)

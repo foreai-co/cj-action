@@ -79,7 +79,7 @@ def _handle_single_test_run(
         run_settings: dict,
         max_fetches: int,
         poll_every_seconds: float
-    ) -> tuple[bool, str]:
+    ) -> tuple[bool, str, list[str]]:
     """Handles running a single test case."""
     json_payload = {}
     if len(run_settings.keys()) > 0:
@@ -87,18 +87,18 @@ def _handle_single_test_run(
     response = session.post(f"{BACKEND_URL}/test-run/{test_case_id}", json=json_payload)
 
     if response.status_code != 201:
-        return False, f"Failed to create test run: {response.json()}"
+        return False, f"Failed to create test run: {response.json()}", []
 
     test_run_id = response.json()
     run_status = _poll_for_status(
         session, f"{BACKEND_URL}/test-run/{test_run_id}", max_fetches, poll_every_seconds)
 
     if not run_status:
-        return False, "Timed out waiting for test result!"
+        return False, "Timed out waiting for test result!", []
 
     if run_status["status"] == "passed":
-        return True, "Test passed!"
-    return False, run_status["error_message"]
+        return True, "Test passed!", []
+    return False, run_status["error_message"], [test_run_id]
 
 
 def _get_latest_group_run_statuses(
@@ -124,12 +124,13 @@ def _get_latest_group_run_statuses(
     if not target_runs:
         raise ValueError("No target run found in the response")
 
-    status_counts = {"passed": 0, "failed": 0, "final_link": final_link}
+    status_counts = {"passed": 0, "failed": 0, "failed_run_ids": [], "final_link": final_link}
     for target_run in target_runs:
         if target_run["status"] == "passed":
             status_counts["passed"] += 1
         if target_run["status"] == "failed":
             status_counts["failed"] += 1
+            status_counts["failed_run_ids"].append(target_run["id"])
 
     if status_counts["passed"] + status_counts["failed"] != len(target_runs):
         return False, status_counts
@@ -143,7 +144,7 @@ def _handle_bulk_test_run(
         run_settings: dict,
         max_fetches: int,
         poll_every_seconds: float
-    ) -> tuple[bool, str]:
+    ) -> tuple[bool, str, list[str]]:
     """Handles running a full test suite collection."""
     response = session.post(
         f"{BACKEND_URL}/test-suites/collection/{collection_id}/run-all",
@@ -152,12 +153,12 @@ def _handle_bulk_test_run(
     response_json = response.json()
 
     if response.status_code != 200:
-        return False, f"Failed to create test suite run: {response_json}"
-    
+        return False, f"Failed to create test suite run: {response_json}", []
+
     try:
         created_at = datetime.datetime.fromisoformat(response_json)
     except ValueError:
-        return False, "Invalid timestamp format in response"
+        return False, "Invalid timestamp format in response", []
 
     for _ in range(max_fetches):
         response = session.get(
@@ -165,7 +166,7 @@ def _handle_bulk_test_run(
 
         if response.status_code != 200:
             print(response.json())
-            return False, "Error fetching test suite status."
+            return False, "Error fetching test suite status.", []
 
         try:
             run_status_json = response.json()
@@ -182,24 +183,25 @@ def _handle_bulk_test_run(
             msg = f"{group_status['passed']} passed, {group_status['failed']} failed."
             msg += f" See status here: {group_status['final_link']}"
 
-            return group_status["failed"] == 0, msg
+            return group_status["failed"] == 0, msg, group_status["failed_run_ids"]
 
         except requests.JSONDecodeError:
             time.sleep(poll_every_seconds)
             continue
 
-    return False, "Timed out waiting for test suite result."
+    return False, "Timed out waiting for test suite result.", []
 
 
-def run(session: requests.Session) -> tuple[bool, str]:
+def run(session: requests.Session) -> tuple[bool, str, list[str]]:
     """Business logic for the action.
     Args:
-        session: requests.Session object.
+        session: requests.Session object. The caller is responsible for closing it.
 
     Returns:
-        Tuple[bool, str]: 
+        Tuple[bool, str, list[str]]:
             - First element: Whether the test run was successful.
             - Second element: Message shown in the GitHub output.
+            - Third element: List of failed test run IDs (empty if all passed or on error).
     """
     test_id = os.getenv("INPUT_TEST_ID", "")
     collection_id = os.getenv("INPUT_TEST_SUITE_ID", "")
@@ -213,16 +215,16 @@ def run(session: requests.Session) -> tuple[bool, str]:
     max_fetches = ceil(wait_timeout_seconds / poll_every_seconds)
 
     if not service_account_key:
-        return False, "Failed: Service account key should be provided."
+        return False, "Failed: Service account key should be provided.", []
 
     try:
         run_settings = _create_run_settings_from_env()
     except ValueError as e:
-        return False, f"Failed: {e}"
+        return False, f"Failed: {e}", []
 
     try:
         if not _login_service_account(session, service_account_key):
-            return False, "Failed to login service account."
+            return False, "Failed to login service account.", []
 
         if test_id:
             return _handle_single_test_run(
@@ -234,7 +236,7 @@ def run(session: requests.Session) -> tuple[bool, str]:
             )
 
         if not collection_id:
-            return False, "Failed: Either test_id or test_suite_id should be provided."
+            return False, "Failed: Either test_id or test_suite_id should be provided.", []
 
         return _handle_bulk_test_run(
             session=session,
@@ -245,7 +247,4 @@ def run(session: requests.Session) -> tuple[bool, str]:
         )
 
     except Exception as e:  # pylint: disable=broad-exception-caught
-        return False, f"Failed: {e}"
-
-    finally:
-        session.close()
+        return False, f"Failed: {e}", []

@@ -38,6 +38,12 @@ inputs:
     required: false
     default: ''
 
+  create_issue_on_failure:
+    description: 'If true, creates a GitHub issue when the test run fails.'
+    required: false
+    default: 'false'
+
+
 outputs:
   result:
     description: 'A message that includes information about the status of the run.'
