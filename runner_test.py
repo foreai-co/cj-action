@@ -167,18 +167,18 @@ class RunnerTests(unittest.TestCase):
                         "test_suite_id": "project-id",
                         "linked_runs": [
                             {
-                                "id": "test-run-id",
+                                "_id": "test-run-id",
                                 "status": "passed",
                                 "created_at": "2025-01-01T00:00:00Z",
                             },
                             {
-                                "id": "test-run-id-2",
+                                "_id": "test-run-id-2",
                                 "status": "failed",
                                 "created_at": "2025-01-01T00:00:00Z",
                             },
                             # Run at different time.
                             {
-                                "id": "test-run-id-3",
+                                "_id": "test-run-id-3",
                                 "status": "passed",
                                 "created_at": "2026-01-01T00:00:01Z",
                             },
