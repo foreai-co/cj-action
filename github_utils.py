@@ -1,5 +1,4 @@
 """Utilities for creating GitHub issues from test run failures."""
-import base64
 import os
 
 import requests
@@ -16,61 +15,6 @@ def _fetch_run_details(session: requests.Session, test_run_id: str) -> dict | No
         return response.json()
     except requests.JSONDecodeError:
         return None
-
-
-def _image_url_to_markdown(url: str, alt_text="Trace Image"):
-    """Fetches an image from a URL, encodes it in Base64, and returns a Markdown string."""
-    try:
-        # 1. Fetch the image data.
-        # We cannot reuse the session here because the image URL may be a pre-signed URL that
-        # requires no auth headers, and the session would include auth headers. So we use a direct
-        # requests.get call without the session.
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-
-        # 2. Encode to Base64
-        image_base64 = base64.b64encode(response.content).decode('utf-8')
-
-        def _get_extension_from_url(url: str) -> str:
-            if "jpeg" in url.lower() or "jpg" in url.lower():
-                return "jpeg"
-            elif ".png" in url.lower():
-                return "png"
-            else:
-                raise ValueError("Unsupported image format in URL")
-
-        extension = _get_extension_from_url(url)
-
-        # 3. Create the Markdown string
-        return f"![{alt_text}](data:image/{extension};base64,{image_base64})"
-
-    except Exception:
-        # Fail silently and return empty string if any step fails.
-        return ""
-
-def _build_screenshot_markdown(
-    session: requests.Session,
-    steps: list
-) -> str:
-    """Returns a markdown screenshot block from the last step, or empty string."""
-    if not steps:
-        return ""
-    trace = steps[-1].get("trace", [])
-    image_id = trace[0].get("screenshot_id") if trace else None
-    if not image_id:
-        return ""
-    response = session.get(f"{BACKEND_URL}/images/run/{image_id}")
-    if response.status_code != 200:
-        return ""
-    url = response.text.strip('"')  # API returns URL as a quoted string
-    image_markdown = _image_url_to_markdown(url)
-    if not image_markdown:
-        return ""
-    return (
-        "\n\n### Screenshot\n\n"
-        f"{image_markdown}"
-    )
-
 
 def _build_steps_markdown(steps: list) -> str:
     """Returns a markdown list of executed steps."""
@@ -91,7 +35,6 @@ def _build_issue_body(
     branch: str,
     run_url: str,
     steps_md: str,
-    screenshot_markdown: str,
 ) -> str:
     """Assembles the full markdown body for the GitHub issue."""
     details_url = f"https://app.foreai.co/test-cases/details/{test_id}/runs?run={test_run_id}"
@@ -140,7 +83,7 @@ def _build_issue_body(
 
 ### Steps Executed
 
-{steps_md}{screenshot_markdown}
+{steps_md}
 ---
 *This issue was automatically created by the Critical Journey GitHub Actions workflow.*"""
 
@@ -176,8 +119,7 @@ def create_github_issue_for_run(session: requests.Session, test_run_id: str) -> 
     """Creates a GitHub issue with full details of a failed test run.
 
     Reads GITHUB_TOKEN, GITHUB_REPOSITORY, and standard GitHub Actions
-    environment variables to build a rich issue body including step traces and
-    a screenshot from the last executed step.
+    environment variables to build a rich issue body including step traces.
     """
     github_token = os.getenv("GITHUB_TOKEN", "")
     github_repository = os.getenv("GITHUB_REPOSITORY", "")
@@ -216,6 +158,5 @@ def create_github_issue_for_run(session: requests.Session, test_run_id: str) -> 
         branch=branch,
         run_url=run_url,
         steps_md=_build_steps_markdown(steps),
-        screenshot_markdown=_build_screenshot_markdown(session, steps),
     )
     _post_github_issue(github_token, github_repository, issue_title, issue_body)
