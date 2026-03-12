@@ -1,5 +1,4 @@
 """Utilities for creating GitHub issues from test run failures."""
-import base64
 import os
 
 import requests
@@ -16,28 +15,6 @@ def _fetch_run_details(session: requests.Session, test_run_id: str) -> dict | No
         return response.json()
     except requests.JSONDecodeError:
         return None
-
-def _build_screenshot_markdown(
-    session: requests.Session,
-    steps: list
-) -> str:
-    """Returns a markdown screenshot block from the last step, or empty string."""
-    if not steps:
-        return ""
-    trace = steps[-1].get("trace", [])
-    image_id = trace[0].get("screenshot_id") if trace else None
-    if not image_id:
-        return ""
-    response = session.get(f"{BACKEND_URL}/images/run/{image_id}")
-    if response.status_code != 200:
-        return ""
-    url = response.text.strip('"')  # API returns URL as a quoted string
-    if not url:
-        return ""
-    return (
-        "\n\n"
-        f"[Screenshot from failing step]({url})"
-    )
 
 def _build_steps_markdown(steps: list) -> str:
     """Returns a markdown list of executed steps."""
@@ -58,7 +35,6 @@ def _build_issue_body(
     branch: str,
     run_url: str,
     steps_md: str,
-    screenshot_markdown: str,
 ) -> str:
     """Assembles the full markdown body for the GitHub issue."""
     details_url = f"https://app.foreai.co/test-cases/details/{test_id}/runs?run={test_run_id}"
@@ -107,7 +83,7 @@ def _build_issue_body(
 
 ### Steps Executed
 
-{steps_md}{screenshot_markdown}
+{steps_md}
 ---
 *This issue was automatically created by the Critical Journey GitHub Actions workflow.*"""
 
@@ -143,8 +119,7 @@ def create_github_issue_for_run(session: requests.Session, test_run_id: str) -> 
     """Creates a GitHub issue with full details of a failed test run.
 
     Reads GITHUB_TOKEN, GITHUB_REPOSITORY, and standard GitHub Actions
-    environment variables to build a rich issue body including step traces and
-    a screenshot from the last executed step.
+    environment variables to build a rich issue body including step traces.
     """
     github_token = os.getenv("GITHUB_TOKEN", "")
     github_repository = os.getenv("GITHUB_REPOSITORY", "")
@@ -183,6 +158,5 @@ def create_github_issue_for_run(session: requests.Session, test_run_id: str) -> 
         branch=branch,
         run_url=run_url,
         steps_md=_build_steps_markdown(steps),
-        screenshot_markdown=_build_screenshot_markdown(session, steps),
     )
     _post_github_issue(github_token, github_repository, issue_title, issue_body)
