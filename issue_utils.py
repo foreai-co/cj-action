@@ -1,12 +1,13 @@
-"""Utilities for creating GitHub issues from test run failures."""
+"""Utilities for creating issues from test run failures."""
 import os
+import urllib.parse
 
 import requests
 
 from runner import BACKEND_URL
 
 
-def _fetch_run_details(session: requests.Session, test_run_id: str) -> dict | None:
+def fetch_run_details(session: requests.Session, test_run_id: str) -> dict | None:
     """Fetches detailed information about a test run from the foreai API."""
     response = session.get(f"{BACKEND_URL}/test-run/{test_run_id}")
     if response.status_code != 200:
@@ -16,7 +17,8 @@ def _fetch_run_details(session: requests.Session, test_run_id: str) -> dict | No
     except requests.JSONDecodeError:
         return None
 
-def _build_steps_markdown(steps: list) -> str:
+
+def build_steps_markdown(steps: list) -> str:
     """Returns a markdown list of executed steps."""
     if not steps:
         return "No step information available"
@@ -27,16 +29,16 @@ def _build_steps_markdown(steps: list) -> str:
     )
 
 
-def _build_issue_body(
+def build_issue_body(
     run_details: dict,
     test_run_id: str,
     test_id: str,
     commit_sha: str,
     branch: str,
-    run_url: str,
+    workflow_url: str,
     steps_md: str,
 ) -> str:
-    """Assembles the full markdown body for the GitHub issue."""
+    """Assembles the full markdown body for an issue."""
     details_url = f"https://app.foreai.co/test-cases/details/{test_id}/runs?run={test_run_id}"
     settings = run_details.get("settings", {})
     viewport = (
@@ -79,13 +81,40 @@ def _build_issue_body(
 
 - **Commit:** {commit_sha}
 - **Branch:** {branch}
-- **Workflow Run:** {run_url}
+- **Workflow Run:** {workflow_url}
 
 ### Steps Executed
 
 {steps_md}
 ---
-*This issue was automatically created by the Critical Journey GitHub Actions workflow.*"""
+*This issue was automatically created by the Critical Journey action.*"""
+
+
+def _prepare_issue_content(
+    session: requests.Session,
+    test_run_id: str,
+    workflow_url: str,
+    commit_sha: str,
+    branch: str,
+) -> tuple[str, str] | None:
+    """Fetches run details and builds issue title and body. Returns None on failure."""
+    run_details = fetch_run_details(session, test_run_id)
+    if not run_details:
+        print(f"Warning: Could not fetch details for run {test_run_id}; skipping issue creation.")
+        return None
+    test_id = run_details.get("test_case_id", "")
+    short_sha = commit_sha[:7] if commit_sha else ""
+    title = f"Test Failed: {run_details.get('user_friendly_error', 'Test execution failed')}"
+    body = build_issue_body(
+        run_details=run_details,
+        test_run_id=test_run_id,
+        test_id=test_id,
+        commit_sha=short_sha,
+        branch=branch,
+        workflow_url=workflow_url,
+        steps_md=build_steps_markdown(run_details.get("steps", [])),
+    )
+    return title, body
 
 
 def _post_github_issue(
@@ -115,12 +144,36 @@ def _post_github_issue(
         print(f"Warning: Failed to create issue ({response.status_code}): {response.text}")
 
 
-def create_github_issue_for_run(session: requests.Session, test_run_id: str) -> None:
-    """Creates a GitHub issue with full details of a failed test run.
+def _post_gitlab_issue(
+    gitlab_token: str,
+    gitlab_url: str,
+    project_id: str,
+    title: str,
+    body: str,
+) -> None:
+    """Posts a new issue to the GitLab API and prints the result."""
+    encoded_project_id = urllib.parse.quote(project_id, safe="")
+    response = requests.post(
+        f"{gitlab_url}/api/v4/projects/{encoded_project_id}/issues",
+        headers={
+            "PRIVATE-TOKEN": gitlab_token,
+            "Content-Type": "application/json",
+        },
+        json={
+            "title": title,
+            "description": body,
+            "labels": "test-failure,foreai",
+        },
+        timeout=30,
+    )
+    if response.status_code == 201:
+        print(f"GitLab issue created: {response.json().get('web_url')}")
+    else:
+        print(f"Warning: Failed to create GitLab issue ({response.status_code}): {response.text}")
 
-    Reads GITHUB_TOKEN, GITHUB_REPOSITORY, and standard GitHub Actions
-    environment variables to build a rich issue body including step traces.
-    """
+
+def create_github_issue_for_run(session: requests.Session, test_run_id: str) -> None:
+    """Creates a GitHub issue with full details of a failed test run."""
     github_token = os.getenv("GITHUB_TOKEN", "")
     github_repository = os.getenv("GITHUB_REPOSITORY", "")
     github_server_url = os.getenv("GITHUB_SERVER_URL", "https://github.com")
@@ -135,28 +188,37 @@ def create_github_issue_for_run(session: requests.Session, test_run_id: str) -> 
         print("Warning: GITHUB_REPOSITORY is not set; cannot create issue.")
         return
 
-    run_details = _fetch_run_details(session, test_run_id)
-    if not run_details:
-        print(f"Warning: Could not fetch details for run {test_run_id}; skipping issue creation.")
-        return
-
-    test_id = run_details.get("test_case_id", "")
     run_url = (
         f"{github_server_url}/{github_repository}/actions/runs/{github_run_id}"
         if github_run_id else ""
     )
-    commit_sha = github_sha[:7] if github_sha else ""
     branch = github_ref.replace("refs/heads/", "") if github_ref else ""
 
-    steps = run_details.get("steps", [])
-    issue_title = f"Test Failed: {run_details.get('user_friendly_error', 'Test execution failed')}"
-    issue_body = _build_issue_body(
-        run_details=run_details,
-        test_run_id=test_run_id,
-        test_id=test_id,
-        commit_sha=commit_sha,
-        branch=branch,
-        run_url=run_url,
-        steps_md=_build_steps_markdown(steps),
-    )
-    _post_github_issue(github_token, github_repository, issue_title, issue_body)
+    content = _prepare_issue_content(session, test_run_id, run_url, github_sha, branch)
+    if not content:
+        return
+    title, body = content
+    _post_github_issue(github_token, github_repository, title, body)
+
+
+def create_gitlab_issue_for_run(session: requests.Session, test_run_id: str) -> None:
+    """Creates a GitLab issue with full details of a failed test run."""
+    gitlab_token = os.getenv("INPUT_GITLAB_TOKEN", "")
+    project_id = os.getenv("INPUT_GITLAB_PROJECT_ID", "")
+    gitlab_url = os.getenv("CI_SERVER_URL", "https://gitlab.com").rstrip("/")
+    pipeline_url = os.getenv("CI_PIPELINE_URL", "")
+    commit_sha = os.getenv("CI_COMMIT_SHA", "")
+    branch = os.getenv("CI_COMMIT_REF_NAME", "")
+
+    if not gitlab_token:
+        print("Warning: INPUT_GITLAB_TOKEN is not set; cannot create GitLab issue.")
+        return
+    if not project_id:
+        print("Warning: INPUT_GITLAB_PROJECT_ID is not set; cannot create GitLab issue.")
+        return
+
+    content = _prepare_issue_content(session, test_run_id, pipeline_url, commit_sha, branch)
+    if not content:
+        return
+    title, body = content
+    _post_gitlab_issue(gitlab_token, gitlab_url, project_id, title, body)

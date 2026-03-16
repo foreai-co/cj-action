@@ -1,0 +1,43 @@
+spec:
+  inputs:
+    service_account_key:
+      description: "Your Critical Journey service account key. Store this as a CI/CD variable."
+    test_id:
+      default: ""
+      description: "ID of a single test to run. Either this or test_suite_id must be provided."
+    test_suite_id:
+      default: ""
+      description: "ID of a test suite to run."
+    wait_timeout_seconds:
+      default: "300"
+      description: "Max seconds to wait for results (30–900)."
+    website_url_override:
+      default: ""
+      description: "Override the base website URL used during test execution."
+    params_override:
+      default: ""
+      description: "JSON string of parameter overrides, e.g. '{\"param1\": \"value1\"}'."
+    browser_type_override:
+      default: ""
+      description: "Browser engine: chromium, firefox, or webkit. Defaults to chromium."
+    create_issue_on_failure:
+      default: "false"
+      description: "Set to 'true' to automatically create a GitLab issue on failure. Requires GITLAB_TOKEN CI/CD variable."
+
+---
+
+critical-journey:
+  image: registry.gitlab.com/foreai-co/cj-action:$CI_COMMIT_TAG
+  variables:
+    INPUT_SERVICE_ACCOUNT_KEY: $[[ inputs.service_account_key ]]
+    INPUT_TEST_ID: $[[ inputs.test_id ]]
+    INPUT_TEST_SUITE_ID: $[[ inputs.test_suite_id ]]
+    INPUT_WAIT_TIMEOUT_SECONDS: $[[ inputs.wait_timeout_seconds ]]
+    INPUT_WEBSITE_URL_OVERRIDE: $[[ inputs.website_url_override ]]
+    INPUT_PARAMS_OVERRIDE: $[[ inputs.params_override ]]
+    INPUT_BROWSER_TYPE_OVERRIDE: $[[ inputs.browser_type_override ]]
+    INPUT_CREATE_ISSUE_ON_FAILURE: $[[ inputs.create_issue_on_failure ]]
+    INPUT_GITLAB_TOKEN: $GITLAB_TOKEN
+    INPUT_GITLAB_PROJECT_ID: $CI_PROJECT_ID
+  script:
+    - echo "Critical Journey test started"

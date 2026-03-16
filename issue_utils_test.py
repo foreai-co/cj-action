@@ -1,11 +1,11 @@
-"""Tests for the github_utils module."""
+"""Tests for the issue_utils module."""
 import os
 import unittest
 from unittest.mock import patch
 
 import requests
 
-import github_utils as github_utils_module
+import issue_utils
 
 
 class CreateGithubIssueTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class CreateGithubIssueTests(unittest.TestCase):
         session = requests.Session()
         with patch.dict(os.environ, {}, clear=True):
             with patch("builtins.print") as mock_print:
-                github_utils_module.create_github_issue_for_run(session, "run-id")
+                issue_utils.create_github_issue_for_run(session, "run-id")
                 mock_print.assert_called_once_with(
                     "Warning: GITHUB_TOKEN is not set; cannot create issue.")
 
@@ -25,7 +25,7 @@ class CreateGithubIssueTests(unittest.TestCase):
         session = requests.Session()
         with patch.dict(os.environ, {"GITHUB_TOKEN": "tok"}, clear=True):
             with patch("builtins.print") as mock_print:
-                github_utils_module.create_github_issue_for_run(session, "run-id")
+                issue_utils.create_github_issue_for_run(session, "run-id")
                 mock_print.assert_called_once_with(
                     "Warning: GITHUB_REPOSITORY is not set; cannot create issue.")
 
@@ -34,11 +34,9 @@ class CreateGithubIssueTests(unittest.TestCase):
         session = requests.Session()
         env = {"GITHUB_TOKEN": "tok", "GITHUB_REPOSITORY": "org/repo"}
         with patch.dict(os.environ, env, clear=True):
-            with patch.object(
-                github_utils_module, "_fetch_run_details", return_value=None
-            ):
+            with patch.object(issue_utils, "fetch_run_details", return_value=None):
                 with patch("builtins.print") as mock_print:
-                    github_utils_module.create_github_issue_for_run(session, "run-id")
+                    issue_utils.create_github_issue_for_run(session, "run-id")
                     mock_print.assert_called_once_with(
                         "Warning: Could not fetch details for run run-id; "
                         "skipping issue creation.")
@@ -65,13 +63,9 @@ class CreateGithubIssueTests(unittest.TestCase):
             "test_case_id": "test-case-id",
         }
         with patch.dict(os.environ, env, clear=True):
-            with patch.object(
-                github_utils_module, "_fetch_run_details", return_value=run_details
-            ):
-                with patch.object(
-                    github_utils_module, "_post_github_issue"
-                ) as mock_post:
-                    github_utils_module.create_github_issue_for_run(session, "run-id")
+            with patch.object(issue_utils, "fetch_run_details", return_value=run_details):
+                with patch.object(issue_utils, "_post_github_issue") as mock_post:
+                    issue_utils.create_github_issue_for_run(session, "run-id")
                     mock_post.assert_called_once()
                     title, body = mock_post.call_args[0][2], mock_post.call_args[0][3]
                     self.assertIn("Button not found", title)

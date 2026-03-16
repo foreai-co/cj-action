@@ -1,0 +1,16 @@
+name: Mirror to GitLab
+
+on:
+  workflow_dispatch:
+
+jobs:
+  mirror-to-gitlab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push mirror to GitLab
+        run: |
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_MIRROR_TOKEN }}@gitlab.com/foreai-co/cj-action.git
+          git push gitlab --mirror
