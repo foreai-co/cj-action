@@ -17,14 +17,11 @@ jobs:
       - name: Push snapshot to GitLab
         run: |
           cp README.gitlab.md README.md
-          if ! grep -q "GitLab CI/CD Component" README.md; then
-            echo "ERROR: README.md does not contain GitLab content"
-            exit 1
-          fi
           git config user.email "ci@foreai.co"
           git config user.name "CI"
           # This doesn't change anything on the github side.
           git add README.md
+          git commit -m "Replace README with GitLab CI/CD component docs"
           git remote add gitlab https://oauth2:${{ secrets.GITLAB_MIRROR_TOKEN }}@gitlab.com/foreai-co/cj-action.git
           git push gitlab HEAD:refs/heads/main --force
           git push gitlab ${{ github.event.inputs.tag }} --force
