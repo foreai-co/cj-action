@@ -22,6 +22,7 @@ jobs:
           # This doesn't change anything on the github side.
           git add README.md
           git commit -m "Replace README with GitLab CI/CD component docs"
+          git tag -f ${{ github.event.inputs.tag }}  # move the tag to the new commit
           git remote add gitlab https://oauth2:${{ secrets.GITLAB_MIRROR_TOKEN }}@gitlab.com/foreai-co/cj-action.git
           git push gitlab HEAD:refs/heads/main --force
           git push gitlab ${{ github.event.inputs.tag }} --force
