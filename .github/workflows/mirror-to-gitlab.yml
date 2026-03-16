@@ -2,6 +2,10 @@ name: Mirror to GitLab
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to push to GitLab (e.g. v1.0.24)'
+        required: true
 
 jobs:
   mirror-to-gitlab:
@@ -14,3 +18,4 @@ jobs:
         run: |
           git remote add gitlab https://oauth2:${{ secrets.GITLAB_MIRROR_TOKEN }}@gitlab.com/foreai-co/cj-action.git
           git push gitlab HEAD:refs/heads/main --force
+          git push gitlab ${{ github.event.inputs.tag }} --force
