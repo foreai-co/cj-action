@@ -27,7 +27,7 @@ spec:
 ---
 
 critical-journey:
-  image: registry.gitlab.com/foreai-co/cj-action:$CI_COMMIT_TAG
+  image: registry.gitlab.com/foreai-co/cj-action:latest
   variables:
     INPUT_SERVICE_ACCOUNT_KEY: $[[ inputs.service_account_key ]]
     INPUT_TEST_ID: $[[ inputs.test_id ]]
