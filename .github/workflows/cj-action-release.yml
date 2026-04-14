@@ -8,7 +8,7 @@ on:
         required: true
         default: ''
       push_to_docker_hub:
-        description: 'Whether to push to Docker Hub'
+        description: 'Push to Docker Hub'
         type: boolean
         default: true
 
@@ -82,7 +82,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
       - name: Build and push to DockerHub
         uses: docker/build-push-action@v5
