@@ -14,9 +14,9 @@ spec:
     website_url_override:
       default: ""
       description: "Override the base website URL used during test execution."
-    params_override:
+    variable_overrides:
       default: ""
-      description: "JSON string of parameter overrides, e.g. '{\"param1\": \"value1\"}'."
+      description: "JSON string of variable overrides, keyed by variable definition ID, e.g. '{\"0b5f...\": {\"kind\": \"non_secret\", \"value\": \"abc\"}}'."
     browser_type_override:
       default: ""
       description: "Browser engine: chromium, firefox, or webkit. Defaults to chromium."
@@ -40,7 +40,7 @@ critical-journey:
     INPUT_TEST_SUITE_ID: $[[ inputs.test_suite_id ]]
     INPUT_WAIT_TIMEOUT_SECONDS: $[[ inputs.wait_timeout_seconds ]]
     INPUT_WEBSITE_URL_OVERRIDE: $[[ inputs.website_url_override ]]
-    INPUT_PARAMS_OVERRIDE: $[[ inputs.params_override ]]
+    INPUT_VARIABLE_OVERRIDES: $[[ inputs.variable_overrides ]]
     INPUT_BROWSER_TYPE_OVERRIDE: $[[ inputs.browser_type_override ]]
     INPUT_CREATE_ISSUE_ON_FAILURE: $[[ inputs.create_issue_on_failure ]]
     INPUT_BACKEND_URL_OVERRIDE: $[[ inputs.backend_url_override ]]

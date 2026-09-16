@@ -9,7 +9,7 @@ This GitHub Action runs the critical journey script inside a Docker container.
 - `service_account_key`: Your service account key to access fore ai Critical Journey.
 - `wait_timeout_seconds`: (Optional) Maximum number of seconds to wait for the test to complete. Default is 300 seconds. Must be between 30 and 900 seconds (inclusive).
 - `website_url_override`: (Optional) Allows overriding the base website URL used during test execution.  
-- `params_override`: (Optional) Allows overriding default parameter values defined in the test suite, so that tests can be run with custom parameter values. This should be a valid json string and all keys and values are also strings.
+- `variable_overrides`: (Optional) Allows overriding test suite variables for this run. This should be a valid json string mapping each variable definition ID to an override object, e.g. `{ "0b5f...": { "kind": "non_secret", "value": "abc" } }`.
 - `browser_type_override`: (Optional) Browser engine to run the test with: 'chromium', 'firefox', or 'webkit'. Defaults to 'chromium' if not specified.
 - `create_issue_on_failure`: (Optional) If `true`, automatically creates a GitHub issue when the test run fails. The issue includes step traces, error details, test configuration, and a screenshot from the last executed step. Requires `GITHUB_TOKEN` to be available. Default is `false`.
 
@@ -60,7 +60,7 @@ jobs:
           # Override the website url using this optional field.
           website_url_override: 'https://beta-dev.my-awesome.com/2'
           # Override test parameters using this optional field. Provide valid json string.
-          params_override: '{ "param1" : "value1", "param2" : "value2" }'
+          variable_overrides: '{ "3f2504e0-4f89-11d3-9a0c-0305e82c3301" : { "kind" : "non_secret", "value" : "value1" } }'
 
       - name: Print result
         run: echo "${{ steps.run_cj.outputs.result }}"

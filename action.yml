@@ -28,8 +28,11 @@ inputs:
     required: false
     default: ''
   
-  params_override:
-    description: 'Override the params for the test. Must be a valid JSON string.'
+  variable_overrides:
+    description: >-
+      Override test suite variables for this run. Must be a valid JSON string mapping
+      each variable definition ID to an override, e.g.
+      '{"0b5f...": {"kind": "non_secret", "value": "abc"}}'.
     required: false
     default: ''
 

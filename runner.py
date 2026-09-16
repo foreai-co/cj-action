@@ -39,14 +39,14 @@ def _create_run_settings_from_env() -> dict:
     """Creates run settings from environment variables."""
     run_settings = {}
     website_url_override = os.getenv("INPUT_WEBSITE_URL_OVERRIDE", "")
-    params_override = os.getenv("INPUT_PARAMS_OVERRIDE", "")
+    variable_overrides = os.getenv("INPUT_VARIABLE_OVERRIDES", "")
     if website_url_override:
         run_settings["website_url_override"] = website_url_override
-    if params_override:
+    if variable_overrides:
         try:
-            run_settings["parameter_overrides"] = json.loads(params_override)
+            run_settings["variable_overrides"] = json.loads(variable_overrides)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in params_override: {e}") from e
+            raise ValueError(f"Invalid JSON in variable_overrides: {e}") from e
     browser_type_override = os.getenv("INPUT_BROWSER_TYPE_OVERRIDE", "")
     if browser_type_override:
         run_settings["browser_type_override"] = browser_type_override.lower()

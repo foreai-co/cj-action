@@ -11,7 +11,7 @@ This GitLab CI/CD component runs the Critical Journey script inside a Docker con
 | `service_account_key` | Yes | | Your service account key to access fore.ai Critical Journey. |
 | `wait_timeout_seconds` | No | `300` | Maximum seconds to wait for the test to complete. Must be between 30 and 900. |
 | `website_url_override` | No | | Overrides the base website URL used during test execution. |
-| `params_override` | No | | Overrides default parameter values. Must be a valid JSON string with string keys and values. |
+| `variable_overrides` | No | | Overrides test suite variables. Must be a valid JSON string keyed by variable definition ID, each value an override object. |
 | `browser_type_override` | No | `chromium` | Browser engine to run the test with: `chromium`, `firefox`, or `webkit`. |
 | `create_issue_on_failure` | No | `false` | If `true`, automatically creates a GitLab issue when the test run fails. Requires `GITLAB_TOKEN` to be available. |
 
@@ -37,7 +37,7 @@ run-critical-journey:
     SERVICE_ACCOUNT_KEY: $CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY
     WAIT_TIMEOUT_SECONDS: "360"
     WEBSITE_URL_OVERRIDE: "https://beta-dev.my-awesome.com/2"
-    PARAMS_OVERRIDE: '{ "param1": "value1", "param2": "value2" }'
+    VARIABLE_OVERRIDES: '{ "3f2504e0-4f89-11d3-9a0c-0305e82c3301": { "kind": "non_secret", "value": "value1" } }'
 ```
 
 ## Example Usage with automatic GitLab issue creation on failure
