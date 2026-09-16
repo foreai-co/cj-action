@@ -236,6 +236,69 @@ class RunnerTests(unittest.TestCase):
                         msg,
                     )
 
+    def test_handle_bulk_test_run_without_overrides_sends_no_body(self):
+        """Test that no request body is sent when no run settings are provided.
+
+        An empty object would be read as an all-default RunSettings and override the
+        collection's stored settings.
+        """
+        session = requests.Session()
+        run_all_url = (
+            f"{runner_module.get_backend_url()}"
+            "/test-suites/collection/collection-id/run-all"
+        )
+
+        class FakeResponse:
+            """Fake response for the test suite run endpoint."""
+            status_code = 200
+
+            def __init__(self, url):
+                self.url_path = url.split(runner_module.get_backend_url())[-1]
+
+            def json(self):
+                """Return a JSON response."""
+                if self.url_path == "/auth/login_service_account":
+                    return {"auth_token": "123"}
+                if self.url_path == "/test-suites/collection/collection-id/run-all":
+                    return "2025-01-01T00:00:00.000Z"
+                if self.url_path == "/test-suites/collection/collection-id":
+                    return {
+                        "test_suite_id": "project-id",
+                        "linked_runs": [
+                            {
+                                "_id": "test-run-id",
+                                "status": "passed",
+                                "created_at": "2025-01-01T00:00:00Z",
+                            },
+                        ],
+                    }
+                raise ValueError(f"Unexpected URL path: {self.url_path}")
+
+        # Collected rather than asserted inline: run() wraps everything in a broad
+        # except, which would swallow the AssertionError.
+        posted_bodies = []
+
+        def fake_post(url, json=None, **kwargs):
+            del kwargs
+            if url == run_all_url:
+                posted_bodies.append(json)
+            return FakeResponse(url)
+
+        def fake_get(url, **kwargs):
+            del kwargs
+            return FakeResponse(url)
+
+        with patch.dict(os.environ, {
+            "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
+            "INPUT_TEST_SUITE_ID": "collection-id",
+        }, clear=True):
+            with patch.object(session, "post", side_effect=fake_post):
+                with patch.object(session, "get", side_effect=fake_get):
+                    result, msg, _ = runner_module.run(session)
+                    self.assertEqual(posted_bodies, [None])
+                    self.assertTrue(result)
+                    self.assertIn("1 passed, 0 failed", msg)
+
 
 if __name__ == "__main__":
     unittest.main()
