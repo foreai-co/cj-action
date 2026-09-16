@@ -14,7 +14,7 @@ class RunnerTests(unittest.TestCase):
     def setUpClass(cls):
         """Fetch the OpenAPI spec once for all tests."""
         # Load OpenAPI spec for the backend.
-        response = requests.get(f"{runner_module.BACKEND_URL}/openapi.json", timeout=10)
+        response = requests.get(f"{runner_module.get_backend_url()}/openapi.json", timeout=10)
         response.raise_for_status()
         cls.openapi_spec = response.json()
 
@@ -68,7 +68,7 @@ class RunnerTests(unittest.TestCase):
             """Fake response for the test run endpoint."""
             def __init__(self, url, method):
                 self.url = url
-                self.url_path = url.split(runner_module.BACKEND_URL)[-1]
+                self.url_path = url.split(runner_module.get_backend_url())[-1]
                 self.url_path_with_placeholder = (
                     self.url_path.replace("test-case-id", "{test_case_id}")
                     .replace("test-run-id", "{test_run_id}")
@@ -109,7 +109,7 @@ class RunnerTests(unittest.TestCase):
                 raise ValueError(f"Unexpected URL: {self.url}")
 
         def fake_post(url, json=None, **kwargs):
-            if url == f"{runner_module.BACKEND_URL}/test-run/test-case-id":
+            if url == f"{runner_module.get_backend_url()}/test-run/test-case-id":
                 schema = openapi_spec["components"]["schemas"]["SubmitTestRunRequest"]
                 for field in json:
                     self.assertIn(
@@ -145,7 +145,7 @@ class RunnerTests(unittest.TestCase):
             """Fake response for the test suite run endpoint."""
             def __init__(self, url, method):
                 self.url = url
-                self.url_path = url.split(runner_module.BACKEND_URL)[-1]
+                self.url_path = url.split(runner_module.get_backend_url())[-1]
                 self.url_path_with_placeholder = (
                     self.url_path.replace("collection-id", "{collection_id}")
                 )
@@ -193,7 +193,11 @@ class RunnerTests(unittest.TestCase):
 
         def fake_post(url, json=None, **kwargs):
             del kwargs
-            if url == f"{runner_module.BACKEND_URL}/test-suites/collection/collection-id/run-all":
+            run_all_url = (
+                f"{runner_module.get_backend_url()}"
+                "/test-suites/collection/collection-id/run-all"
+            )
+            if url == run_all_url:
                 schema = openapi_spec["components"]["schemas"]["RunSettings"]
                 for field in json:
                     self.assertIn(
@@ -218,7 +222,7 @@ class RunnerTests(unittest.TestCase):
                     self.assertFalse(result)
                     self.assertIn("1 passed, 1 failed", msg)
                     self.assertIn(
-                        "https://app.foreai.co/collections/project-id/"
+                        f"{runner_module.get_app_url()}/collections/project-id/"
                         "collection-id?created_at=2025-01-01T00:00:00.000000Z",
                         msg,
                     )

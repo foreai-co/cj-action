@@ -4,12 +4,12 @@ import urllib.parse
 
 import requests
 
-from runner import BACKEND_URL
+from runner import get_app_url, get_backend_url
 
 
 def fetch_run_details(session: requests.Session, test_run_id: str) -> dict | None:
     """Fetches detailed information about a test run from the foreai API."""
-    response = session.get(f"{BACKEND_URL}/test-run/{test_run_id}")
+    response = session.get(f"{get_backend_url()}/test-run/{test_run_id}")
     if response.status_code != 200:
         return None
     try:
@@ -39,7 +39,7 @@ def build_issue_body(
     steps_md: str,
 ) -> str:
     """Assembles the full markdown body for an issue."""
-    details_url = f"https://app.foreai.co/test-cases/details/{test_id}/runs?run={test_run_id}"
+    details_url = f"{get_app_url()}/test-cases/details/{test_id}/runs?run={test_run_id}"
     settings = run_details.get("settings", {})
     viewport = (
         f"{settings.get('viewport_width_override', 'N/A')}"

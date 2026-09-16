@@ -43,6 +43,16 @@ inputs:
     required: false
     default: 'false'
 
+  backend_url_override:
+    description: 'Override the Critical Journey backend URL. Leave empty; for internal use only.'
+    required: false
+    default: ''
+
+  app_url_override:
+    description: 'Override the Critical Journey app URL used in result links. Must match backend_url_override. Leave empty; for internal use only.'
+    required: false
+    default: ''
+
 
 outputs:
   result:

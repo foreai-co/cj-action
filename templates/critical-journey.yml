@@ -23,6 +23,12 @@ spec:
     create_issue_on_failure:
       default: "false"
       description: "Set to 'true' to automatically create a GitLab issue on failure. Requires GITLAB_TOKEN CI/CD variable."
+    backend_url_override:
+      default: ""
+      description: "Override the Critical Journey backend URL. Leave empty; for internal use only."
+    app_url_override:
+      default: ""
+      description: "Override the Critical Journey app URL used in result links. Must match backend_url_override. Leave empty; for internal use only."
 
 ---
 
@@ -37,6 +43,8 @@ critical-journey:
     INPUT_PARAMS_OVERRIDE: $[[ inputs.params_override ]]
     INPUT_BROWSER_TYPE_OVERRIDE: $[[ inputs.browser_type_override ]]
     INPUT_CREATE_ISSUE_ON_FAILURE: $[[ inputs.create_issue_on_failure ]]
+    INPUT_BACKEND_URL_OVERRIDE: $[[ inputs.backend_url_override ]]
+    INPUT_APP_URL_OVERRIDE: $[[ inputs.app_url_override ]]
     INPUT_GITLAB_TOKEN: $GITLAB_TOKEN
     INPUT_GITLAB_PROJECT_ID: $CI_PROJECT_ID
   script:

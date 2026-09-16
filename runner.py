@@ -7,7 +7,27 @@ from math import ceil
 
 import requests
 
-BACKEND_URL = "https://cj-backend.foreai.co"
+DEFAULT_BACKEND_URL = "https://cj-backend.foreai.co"
+DEFAULT_APP_URL = "https://app.foreai.co"
+
+
+def get_backend_url() -> str:
+    """Returns the backend URL, honouring an optional override.
+
+    The default should be used in almost all cases; the override exists for
+    internal purposes only.
+    """
+    return os.getenv("INPUT_BACKEND_URL_OVERRIDE", "").strip().rstrip("/") or DEFAULT_BACKEND_URL
+
+
+def get_app_url() -> str:
+    """Returns the app URL used to build result links, honouring an optional override.
+
+    Must be kept consistent with the backend URL, otherwise the reported links
+    point at an environment that does not know the referenced IDs.
+    """
+    return os.getenv("INPUT_APP_URL_OVERRIDE", "").strip().rstrip("/") or DEFAULT_APP_URL
+
 
 def _get_headers(token: str) -> dict:
     return {
@@ -35,7 +55,7 @@ def _create_run_settings_from_env() -> dict:
 def _login_service_account(session: requests.Session, service_account_key: str) -> bool:
     """Logs in the service account and updates session headers."""
     session.headers.update(_get_headers(service_account_key))
-    response = session.post(f"{BACKEND_URL}/auth/login_service_account")
+    response = session.post(f"{get_backend_url()}/auth/login_service_account")
 
     if response.status_code != 200:
         return False
@@ -84,14 +104,14 @@ def _handle_single_test_run(
     json_payload = {}
     if len(run_settings.keys()) > 0:
         json_payload["settings"] = run_settings
-    response = session.post(f"{BACKEND_URL}/test-run/{test_case_id}", json=json_payload)
+    response = session.post(f"{get_backend_url()}/test-run/{test_case_id}", json=json_payload)
 
     if response.status_code != 201:
         return False, f"Failed to create test run: {response.json()}", []
 
     test_run_id = response.json()
     run_status = _poll_for_status(
-        session, f"{BACKEND_URL}/test-run/{test_run_id}", max_fetches, poll_every_seconds)
+        session, f"{get_backend_url()}/test-run/{test_run_id}", max_fetches, poll_every_seconds)
 
     if not run_status:
         return False, "Timed out waiting for test result!", []
@@ -110,7 +130,7 @@ def _get_latest_group_run_statuses(
     linked_runs = run_response.get("linked_runs", [])
 
     project_id = run_response.get("test_suite_id")
-    final_link = f"https://app.foreai.co/collections/{project_id}/{collection_id}"
+    final_link = f"{get_app_url()}/collections/{project_id}/{collection_id}"
     final_link += f"?created_at={created_at.strftime('%Y-%m-%dT%H:%M:%S.%fZ')}"
 
     if not linked_runs:
@@ -147,7 +167,7 @@ def _handle_bulk_test_run(
     ) -> tuple[bool, str, list[str]]:
     """Handles running a full test suite collection."""
     response = session.post(
-        f"{BACKEND_URL}/test-suites/collection/{collection_id}/run-all",
+        f"{get_backend_url()}/test-suites/collection/{collection_id}/run-all",
         json=run_settings)
     
     response_json = response.json()
@@ -162,7 +182,7 @@ def _handle_bulk_test_run(
 
     for _ in range(max_fetches):
         response = session.get(
-            f"{BACKEND_URL}/test-suites/collection/{collection_id}")
+            f"{get_backend_url()}/test-suites/collection/{collection_id}")
 
         if response.status_code != 200:
             print(response.json())
