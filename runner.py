@@ -166,9 +166,11 @@ def _handle_bulk_test_run(
         poll_every_seconds: float
     ) -> tuple[bool, str, list[str]]:
     """Handles running a full test suite collection."""
+    # Sending an empty object would be read as an all-default RunSettings and wipe the
+    # collection's stored settings; omitting the body lets them apply.
     response = session.post(
         f"{get_backend_url()}/test-suites/collection/{collection_id}/run-all",
-        json=run_settings)
+        json=run_settings or None)
     
     response_json = response.json()
 
