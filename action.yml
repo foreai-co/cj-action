@@ -28,8 +28,11 @@ inputs:
     required: false
     default: ''
   
-  params_override:
-    description: 'Override the params for the test. Must be a valid JSON string.'
+  variable_overrides:
+    description: >-
+      Override test suite variables for this run. Must be a valid JSON string mapping
+      each variable definition ID to an override, e.g.
+      '{"0b5f...": {"kind": "non_secret", "value": "abc"}}'.
     required: false
     default: ''
 
@@ -42,6 +45,16 @@ inputs:
     description: 'If true, creates a GitHub issue when the test run fails.'
     required: false
     default: 'false'
+
+  backend_url_override:
+    description: 'Override the Critical Journey backend URL. Leave empty; for internal use only.'
+    required: false
+    default: ''
+
+  app_url_override:
+    description: 'Override the Critical Journey app URL used in result links. Must match backend_url_override. Leave empty; for internal use only.'
+    required: false
+    default: ''
 
 
 outputs:

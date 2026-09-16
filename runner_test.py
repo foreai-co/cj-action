@@ -14,7 +14,7 @@ class RunnerTests(unittest.TestCase):
     def setUpClass(cls):
         """Fetch the OpenAPI spec once for all tests."""
         # Load OpenAPI spec for the backend.
-        response = requests.get(f"{runner_module.BACKEND_URL}/openapi.json", timeout=10)
+        response = requests.get(f"{runner_module.get_backend_url()}/openapi.json", timeout=10)
         response.raise_for_status()
         cls.openapi_spec = response.json()
 
@@ -24,15 +24,15 @@ class RunnerTests(unittest.TestCase):
         cls.openapi_spec = None
 
     def test_run_settings_with_invalid_json(self):
-        """Test that the runner module returns an error when the params_override is invalid JSON."""
+        """Test that an error is returned when variable_overrides is invalid JSON."""
         with patch.dict(os.environ, {
             "INPUT_WEBSITE_URL_OVERRIDE": "https://example.com",
-            "INPUT_PARAMS_OVERRIDE": '"foo": "bar"',  # invalid JSON
+            "INPUT_VARIABLE_OVERRIDES": '"foo": "bar"',  # invalid JSON
             "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
         }, clear=True):
             result, msg, _ = runner_module.run(requests.Session())
             self.assertFalse(result)
-            self.assertIn("Failed: Invalid JSON in params_override", msg)
+            self.assertIn("Failed: Invalid JSON in variable_overrides", msg)
 
     def test_no_login_on_invalid_service_account_key(self):
         """Test that the runner module returns an error when the service account key is invalid."""
@@ -68,7 +68,7 @@ class RunnerTests(unittest.TestCase):
             """Fake response for the test run endpoint."""
             def __init__(self, url, method):
                 self.url = url
-                self.url_path = url.split(runner_module.BACKEND_URL)[-1]
+                self.url_path = url.split(runner_module.get_backend_url())[-1]
                 self.url_path_with_placeholder = (
                     self.url_path.replace("test-case-id", "{test_case_id}")
                     .replace("test-run-id", "{test_run_id}")
@@ -109,7 +109,7 @@ class RunnerTests(unittest.TestCase):
                 raise ValueError(f"Unexpected URL: {self.url}")
 
         def fake_post(url, json=None, **kwargs):
-            if url == f"{runner_module.BACKEND_URL}/test-run/test-case-id":
+            if url == f"{runner_module.get_backend_url()}/test-run/test-case-id":
                 schema = openapi_spec["components"]["schemas"]["SubmitTestRunRequest"]
                 for field in json:
                     self.assertIn(
@@ -126,7 +126,10 @@ class RunnerTests(unittest.TestCase):
             "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
             "INPUT_TEST_ID": "test-case-id",
             "INPUT_WEBSITE_URL_OVERRIDE": "https://example.com",
-            "INPUT_PARAMS_OVERRIDE": '{"foo": "bar"}',
+            "INPUT_VARIABLE_OVERRIDES": (
+                '{"3f2504e0-4f89-11d3-9a0c-0305e82c3301":'
+                ' {"kind": "non_secret", "value": "bar"}}'
+            ),
             "INPUT_BROWSER_TYPE_OVERRIDE": "firefox",
         }, clear=True):
             with patch.object(session, "post", side_effect=fake_post):
@@ -145,7 +148,7 @@ class RunnerTests(unittest.TestCase):
             """Fake response for the test suite run endpoint."""
             def __init__(self, url, method):
                 self.url = url
-                self.url_path = url.split(runner_module.BACKEND_URL)[-1]
+                self.url_path = url.split(runner_module.get_backend_url())[-1]
                 self.url_path_with_placeholder = (
                     self.url_path.replace("collection-id", "{collection_id}")
                 )
@@ -191,15 +194,21 @@ class RunnerTests(unittest.TestCase):
                 """Return an OK status code."""
                 return 200
 
+        # Collected here rather than asserted inline: run() wraps everything in a
+        # broad except, which would swallow the AssertionError and report it as a
+        # generic failure.
+        unknown_fields = []
+
         def fake_post(url, json=None, **kwargs):
             del kwargs
-            if url == f"{runner_module.BACKEND_URL}/test-suites/collection/collection-id/run-all":
-                schema = openapi_spec["components"]["schemas"]["RunSettings"]
-                for field in json:
-                    self.assertIn(
-                        field,
-                        schema.get("properties", {}).keys() | set(schema.get("required", []))
-                    )
+            run_all_url = (
+                f"{runner_module.get_backend_url()}"
+                "/test-suites/collection/collection-id/run-all"
+            )
+            if url == run_all_url:
+                schema = openapi_spec["components"]["schemas"]["RunSettings-Input"]
+                known = schema.get("properties", {}).keys() | set(schema.get("required", []))
+                unknown_fields.extend(field for field in json if field not in known)
             return FakeResponse(url, "POST")
 
         def fake_get(url, **kwargs):
@@ -209,16 +218,20 @@ class RunnerTests(unittest.TestCase):
             "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
             "INPUT_TEST_SUITE_ID": "collection-id",
             "INPUT_WEBSITE_URL_OVERRIDE": "https://example.com",
-            "INPUT_PARAMS_OVERRIDE": '{"foo": "bar"}',
+            "INPUT_VARIABLE_OVERRIDES": (
+                '{"3f2504e0-4f89-11d3-9a0c-0305e82c3301":'
+                ' {"kind": "non_secret", "value": "bar"}}'
+            ),
             "INPUT_BROWSER_TYPE_OVERRIDE": "firefox",
         }, clear=True):
             with patch.object(session, "post", side_effect=fake_post):
                 with patch.object(session, "get", side_effect=fake_get):
                     result, msg, _ = runner_module.run(session)
+                    self.assertEqual(unknown_fields, [])
                     self.assertFalse(result)
                     self.assertIn("1 passed, 1 failed", msg)
                     self.assertIn(
-                        "https://app.foreai.co/collections/project-id/"
+                        f"{runner_module.get_app_url()}/collections/project-id/"
                         "collection-id?created_at=2025-01-01T00:00:00.000000Z",
                         msg,
                     )
