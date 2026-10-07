@@ -300,5 +300,55 @@ class RunnerTests(unittest.TestCase):
                     self.assertIn("1 passed, 0 failed", msg)
 
 
+    def test_handle_bulk_test_run_with_skipped_tests(self):
+        """Test that skipped runs count as finished and do not fail the collection run."""
+        session = requests.Session()
+
+        class FakeResponse:
+            """Fake response for the test suite run endpoint."""
+            status_code = 200
+
+            def __init__(self, url):
+                self.url_path = url.split(runner_module.get_backend_url())[-1]
+
+            def json(self):
+                """Return a JSON response."""
+                if self.url_path == "/auth/login_service_account":
+                    return {"auth_token": "123"}
+                if self.url_path == "/test-suites/collection/collection-id/run-all":
+                    return "2025-01-01T00:00:00.000Z"
+                if self.url_path == "/test-suites/collection/collection-id":
+                    return {
+                        "test_suite_id": "project-id",
+                        "linked_runs": [
+                            {
+                                "_id": "test-run-id",
+                                "status": "passed",
+                                "created_at": "2025-01-01T00:00:00Z",
+                            },
+                            {
+                                "_id": "test-run-id-2",
+                                "status": "skipped",
+                                "created_at": "2025-01-01T00:00:00Z",
+                            },
+                        ],
+                    }
+                raise ValueError(f"Unexpected URL path: {self.url_path}")
+
+        def fake_request(url, **kwargs):
+            del kwargs
+            return FakeResponse(url)
+
+        with patch.dict(os.environ, {
+            "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
+            "INPUT_TEST_SUITE_ID": "collection-id",
+        }, clear=True):
+            with patch.object(session, "post", side_effect=fake_request):
+                with patch.object(session, "get", side_effect=fake_request):
+                    result, msg, failed_run_ids = runner_module.run(session)
+                    self.assertTrue(result)
+                    self.assertIn("1 passed, 0 failed, 1 skipped.", msg)
+                    self.assertEqual(failed_run_ids, [])
+
 if __name__ == "__main__":
     unittest.main()
