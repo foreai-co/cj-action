@@ -300,21 +300,27 @@ class RunnerTests(unittest.TestCase):
                     self.assertIn("1 passed, 0 failed", msg)
 
 
-    def test_handle_bulk_test_run_with_skipped_tests(self):
-        """Test that skipped runs count as finished and do not fail the collection run."""
+    def _run_with_statuses(self, statuses: list[str], env: dict) -> tuple[bool, str, list[str]]:
+        """Runs the action against a backend whose runs finished with the given statuses."""
         session = requests.Session()
 
         class FakeResponse:
-            """Fake response for the test suite run endpoint."""
-            status_code = 200
+            """Fake response for the test run and test suite run endpoints."""
+            status_code = 201
 
             def __init__(self, url):
                 self.url_path = url.split(runner_module.get_backend_url())[-1]
+                if self.url_path != "/test-run/test-case-id":
+                    self.status_code = 200
 
             def json(self):
                 """Return a JSON response."""
                 if self.url_path == "/auth/login_service_account":
                     return {"auth_token": "123"}
+                if self.url_path == "/test-run/test-case-id":
+                    return "test-run-id-0"
+                if self.url_path == "/test-run/test-run-id-0":
+                    return {"status": statuses[0], "error_message": None}
                 if self.url_path == "/test-suites/collection/collection-id/run-all":
                     return "2025-01-01T00:00:00.000Z"
                 if self.url_path == "/test-suites/collection/collection-id":
@@ -322,15 +328,11 @@ class RunnerTests(unittest.TestCase):
                         "test_suite_id": "project-id",
                         "linked_runs": [
                             {
-                                "_id": "test-run-id",
-                                "status": "passed",
+                                "_id": f"test-run-id-{idx}",
+                                "status": status,
                                 "created_at": "2025-01-01T00:00:00Z",
-                            },
-                            {
-                                "_id": "test-run-id-2",
-                                "status": "skipped",
-                                "created_at": "2025-01-01T00:00:00Z",
-                            },
+                            }
+                            for idx, status in enumerate(statuses)
                         ],
                     }
                 raise ValueError(f"Unexpected URL path: {self.url_path}")
@@ -339,16 +341,56 @@ class RunnerTests(unittest.TestCase):
             del kwargs
             return FakeResponse(url)
 
-        with patch.dict(os.environ, {
-            "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
-            "INPUT_TEST_SUITE_ID": "collection-id",
-        }, clear=True):
+        with patch.dict(os.environ, {"INPUT_SERVICE_ACCOUNT_KEY": "test_key", **env}, clear=True):
             with patch.object(session, "post", side_effect=fake_request):
                 with patch.object(session, "get", side_effect=fake_request):
-                    result, msg, failed_run_ids = runner_module.run(session)
-                    self.assertTrue(result)
-                    self.assertIn("1 passed, 0 failed, 1 skipped.", msg)
-                    self.assertEqual(failed_run_ids, [])
+                    return runner_module.run(session)
+
+    def test_handle_bulk_test_run_with_not_executed_and_cancelled_runs(self):
+        """Test how runs that did not pass or fail affect the collection run result."""
+        cases = [
+            # (statuses, fail_on_skipped, fail_on_not_runnable, success, msg, failed ids)
+            (["passed", "skipped"], "false", "false", True,
+             "1 passed, 0 failed, 1 skipped.", []),
+            (["passed", "skipped"], "true", "false", False,
+             "1 passed, 0 failed, 1 skipped.", []),
+            (["passed", "not_runnable"], "true", "false", True,
+             "1 passed, 0 failed, 1 not runnable.", []),
+            (["passed", "not_runnable"], "false", "true", False,
+             "1 passed, 0 failed, 1 not runnable.", []),
+            (["passed", "cancelled", "aborted"], "false", "false", False,
+             "1 passed, 0 failed, 1 cancelled, 1 aborted.", ["test-run-id-1", "test-run-id-2"]),
+        ]
+        for statuses, fail_on_skipped, fail_on_not_runnable, success, msg, ids in cases:
+            with self.subTest(statuses=statuses, fail_on_skipped=fail_on_skipped,
+                              fail_on_not_runnable=fail_on_not_runnable):
+                result, output_msg, failed_run_ids = self._run_with_statuses(statuses, {
+                    "INPUT_TEST_SUITE_ID": "collection-id",
+                    "INPUT_FAIL_ON_SKIPPED": fail_on_skipped,
+                    "INPUT_FAIL_ON_NOT_RUNNABLE": fail_on_not_runnable,
+                })
+                self.assertEqual(result, success)
+                self.assertIn(msg, output_msg)
+                self.assertEqual(failed_run_ids, ids)
+
+    def test_handle_single_test_run_with_not_executed_and_cancelled_runs(self):
+        """Test how a single run that did not pass or fail affects the result."""
+        cases = [
+            # (status, fail_on_not_runnable, success, msg, failed ids)
+            ("not_runnable", "false", True, "Test was not runnable.", []),
+            ("not_runnable", "true", False, "Test was not runnable.", []),
+            ("cancelled", "false", False, "Test was cancelled.", ["test-run-id-0"]),
+            ("aborted", "false", False, "Test was aborted.", ["test-run-id-0"]),
+        ]
+        for status, fail_on_not_runnable, success, msg, ids in cases:
+            with self.subTest(status=status, fail_on_not_runnable=fail_on_not_runnable):
+                result, output_msg, failed_run_ids = self._run_with_statuses([status], {
+                    "INPUT_TEST_ID": "test-case-id",
+                    "INPUT_FAIL_ON_NOT_RUNNABLE": fail_on_not_runnable,
+                })
+                self.assertEqual(result, success)
+                self.assertEqual(output_msg, msg)
+                self.assertEqual(failed_run_ids, ids)
 
 if __name__ == "__main__":
     unittest.main()

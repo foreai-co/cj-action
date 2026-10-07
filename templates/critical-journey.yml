@@ -23,6 +23,12 @@ spec:
     create_issue_on_failure:
       default: "false"
       description: "Set to 'true' to automatically create a GitLab issue on failure. Requires GITLAB_TOKEN CI/CD variable."
+    fail_on_skipped:
+      default: "false"
+      description: "Set to 'true' to fail when any test in the run was skipped."
+    fail_on_not_runnable:
+      default: "false"
+      description: "Set to 'true' to fail when any test could not be run, e.g. because it is still generating."
     backend_url_override:
       default: ""
       description: "Override the Critical Journey backend URL. Leave empty; for internal use only."
@@ -43,6 +49,8 @@ critical-journey:
     INPUT_VARIABLE_OVERRIDES: $[[ inputs.variable_overrides ]]
     INPUT_BROWSER_TYPE_OVERRIDE: $[[ inputs.browser_type_override ]]
     INPUT_CREATE_ISSUE_ON_FAILURE: $[[ inputs.create_issue_on_failure ]]
+    INPUT_FAIL_ON_SKIPPED: $[[ inputs.fail_on_skipped ]]
+    INPUT_FAIL_ON_NOT_RUNNABLE: $[[ inputs.fail_on_not_runnable ]]
     INPUT_BACKEND_URL_OVERRIDE: $[[ inputs.backend_url_override ]]
     INPUT_APP_URL_OVERRIDE: $[[ inputs.app_url_override ]]
     INPUT_GITLAB_TOKEN: $GITLAB_TOKEN
