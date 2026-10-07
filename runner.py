@@ -144,15 +144,21 @@ def _get_latest_group_run_statuses(
     if not target_runs:
         raise ValueError("No target run found in the response")
 
-    status_counts = {"passed": 0, "failed": 0, "failed_run_ids": [], "final_link": final_link}
+    status_counts = {
+        "passed": 0, "failed": 0, "skipped": 0, "failed_run_ids": [], "final_link": final_link
+    }
     for target_run in target_runs:
         if target_run["status"] == "passed":
             status_counts["passed"] += 1
         if target_run["status"] == "failed":
             status_counts["failed"] += 1
             status_counts["failed_run_ids"].append(target_run["_id"])
+        # Tests marked as skipped in the collection get a run that is never executed.
+        if target_run["status"] == "skipped":
+            status_counts["skipped"] += 1
 
-    if status_counts["passed"] + status_counts["failed"] != len(target_runs):
+    finished = status_counts["passed"] + status_counts["failed"] + status_counts["skipped"]
+    if finished != len(target_runs):
         return False, status_counts
 
     return True, status_counts
@@ -202,7 +208,10 @@ def _handle_bulk_test_run(
                 time.sleep(poll_every_seconds)
                 continue
 
-            msg = f"{group_status['passed']} passed, {group_status['failed']} failed."
+            msg = f"{group_status['passed']} passed, {group_status['failed']} failed"
+            if group_status["skipped"]:
+                msg += f", {group_status['skipped']} skipped"
+            msg += "."
             msg += f" See status here: {group_status['final_link']}"
 
             return group_status["failed"] == 0, msg, group_status["failed_run_ids"]
