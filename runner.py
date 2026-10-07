@@ -10,6 +10,11 @@ import requests
 DEFAULT_BACKEND_URL = "https://cj-backend.foreai.co"
 DEFAULT_APP_URL = "https://app.foreai.co"
 
+FAILED_STATUSES = ("failed", "cancelled", "aborted")
+# Runs with these statuses were never executed. They fail the action only if configured to.
+NOT_EXECUTED_STATUSES = ("skipped", "not_runnable")
+FINISHED_STATUSES = ("passed", *FAILED_STATUSES, *NOT_EXECUTED_STATUSES)
+
 
 def get_backend_url() -> str:
     """Returns the backend URL, honouring an optional override.
@@ -27,6 +32,14 @@ def get_app_url() -> str:
     point at an environment that does not know the referenced IDs.
     """
     return os.getenv("INPUT_APP_URL_OVERRIDE", "").strip().rstrip("/") or DEFAULT_APP_URL
+
+
+def _get_failing_not_executed_statuses() -> set[str]:
+    """Returns the not executed statuses that should fail the action."""
+    return {
+        status for status in NOT_EXECUTED_STATUSES
+        if os.getenv(f"INPUT_FAIL_ON_{status.upper()}", "false").strip().lower() == "true"
+    }
 
 
 def _get_headers(token: str) -> dict:
@@ -83,7 +96,7 @@ def _poll_for_status(
 
         try:
             run_status = response.json()
-            if run_status.get("status") in {"passed", "failed"}:
+            if run_status.get("status") in FINISHED_STATUSES:
                 return run_status
         except requests.JSONDecodeError:
             return None
@@ -116,9 +129,13 @@ def _handle_single_test_run(
     if not run_status:
         return False, "Timed out waiting for test result!", []
 
-    if run_status["status"] == "passed":
+    status = run_status["status"]
+    if status == "passed":
         return True, "Test passed!", []
-    return False, run_status["error_message"], [test_run_id]
+    status_msg = f"Test was {status.replace('_', ' ')}."
+    if status in NOT_EXECUTED_STATUSES:
+        return status not in _get_failing_not_executed_statuses(), status_msg, []
+    return False, run_status.get("error_message") or status_msg, [test_run_id]
 
 
 def _get_latest_group_run_statuses(
@@ -144,22 +161,15 @@ def _get_latest_group_run_statuses(
     if not target_runs:
         raise ValueError("No target run found in the response")
 
-    status_counts = {
-        "passed": 0, "failed": 0, "skipped": 0, "failed_run_ids": [], "final_link": final_link
-    }
+    status_counts = {status: 0 for status in FINISHED_STATUSES}
+    status_counts.update({"failed_run_ids": [], "final_link": final_link})
     for target_run in target_runs:
-        if target_run["status"] == "passed":
-            status_counts["passed"] += 1
-        if target_run["status"] == "failed":
-            status_counts["failed"] += 1
+        status = target_run["status"]
+        if status not in FINISHED_STATUSES:
+            return False, status_counts
+        status_counts[status] += 1
+        if status in FAILED_STATUSES:
             status_counts["failed_run_ids"].append(target_run["_id"])
-        # Tests marked as skipped in the collection get a run that is never executed.
-        if target_run["status"] == "skipped":
-            status_counts["skipped"] += 1
-
-    finished = status_counts["passed"] + status_counts["failed"] + status_counts["skipped"]
-    if finished != len(target_runs):
-        return False, status_counts
 
     return True, status_counts
 
@@ -209,12 +219,15 @@ def _handle_bulk_test_run(
                 continue
 
             msg = f"{group_status['passed']} passed, {group_status['failed']} failed"
-            if group_status["skipped"]:
-                msg += f", {group_status['skipped']} skipped"
-            msg += "."
-            msg += f" See status here: {group_status['final_link']}"
+            for status in ("cancelled", "aborted", *NOT_EXECUTED_STATUSES):
+                if group_status[status]:
+                    msg += f", {group_status[status]} {status.replace('_', ' ')}"
+            msg += f". See status here: {group_status['final_link']}"
 
-            return group_status["failed"] == 0, msg, group_status["failed_run_ids"]
+            success = not group_status["failed_run_ids"] and not any(
+                group_status[status] for status in _get_failing_not_executed_statuses()
+            )
+            return success, msg, group_status["failed_run_ids"]
 
         except requests.JSONDecodeError:
             time.sleep(poll_every_seconds)

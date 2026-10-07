@@ -12,6 +12,10 @@ This GitHub Action runs the critical journey script inside a Docker container.
 - `variable_overrides`: (Optional) Allows overriding test suite variables for this run. This should be a valid json string mapping each variable definition ID to an override object, e.g. `{ "0b5f...": { "kind": "non_secret", "value": "abc" } }`.
 - `browser_type_override`: (Optional) Browser engine to run the test with: 'chromium', 'firefox', or 'webkit'. Defaults to 'chromium' if not specified.
 - `create_issue_on_failure`: (Optional) If `true`, automatically creates a GitHub issue when the test run fails. The issue includes step traces, error details, test configuration, and a screenshot from the last executed step. Requires `GITHUB_TOKEN` to be available. Default is `false`.
+- `fail_on_skipped`: (Optional) If `true`, the action fails when any test in the run was skipped. Default is `false`.
+- `fail_on_not_runnable`: (Optional) If `true`, the action fails when any test could not be run, e.g. because it is still generating. Default is `false`.
+
+Cancelled and aborted runs always fail the action.
 
 ## Outputs
 
