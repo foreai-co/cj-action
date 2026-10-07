@@ -27,7 +27,7 @@ spec:
       default: "false"
       description: "Set to 'true' to fail when any test in the run was skipped."
     fail_on_not_runnable:
-      default: "false"
+      default: "true"
       description: "Set to 'true' to fail when any test could not be run, e.g. because it is still generating."
     backend_url_override:
       default: ""

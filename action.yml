@@ -54,7 +54,7 @@ inputs:
   fail_on_not_runnable:
     description: 'If true, the action fails when any test could not be run, e.g. because it is still generating.'
     required: false
-    default: 'false'
+    default: 'true'
 
   backend_url_override:
     description: 'Override the Critical Journey backend URL. Leave empty; for internal use only.'

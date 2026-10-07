@@ -15,7 +15,7 @@ This GitLab CI/CD component runs the Critical Journey script inside a Docker con
 | `browser_type_override` | No | `chromium` | Browser engine to run the test with: `chromium`, `firefox`, or `webkit`. |
 | `create_issue_on_failure` | No | `false` | If `true`, automatically creates a GitLab issue when the test run fails. Requires `GITLAB_TOKEN` to be available. |
 | `fail_on_skipped` | No | `false` | If `true`, the job fails when any test in the run was skipped. |
-| `fail_on_not_runnable` | No | `false` | If `true`, the job fails when any test could not be run, e.g. because it is still generating. |
+| `fail_on_not_runnable` | No | `true` | If `true`, the job fails when any test could not be run, e.g. because it is still generating. |
 
 Cancelled and aborted runs always fail the job.
 

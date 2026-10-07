@@ -373,6 +373,12 @@ class RunnerTests(unittest.TestCase):
                 self.assertIn(msg, output_msg)
                 self.assertEqual(failed_run_ids, ids)
 
+    def test_handle_bulk_test_run_defaults_for_not_executed_runs(self):
+        """Test that by default not runnable runs fail the action and skipped runs do not."""
+        env = {"INPUT_TEST_SUITE_ID": "collection-id"}
+        self.assertTrue(self._run_with_statuses(["passed", "skipped"], env)[0])
+        self.assertFalse(self._run_with_statuses(["passed", "not_runnable"], env)[0])
+
     def test_handle_single_test_run_with_not_executed_and_cancelled_runs(self):
         """Test how a single run that did not pass or fail affects the result."""
         cases = [

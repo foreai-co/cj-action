@@ -11,8 +11,9 @@ DEFAULT_BACKEND_URL = "https://cj-backend.foreai.co"
 DEFAULT_APP_URL = "https://app.foreai.co"
 
 FAILED_STATUSES = ("failed", "cancelled", "aborted")
-# Runs with these statuses were never executed. They fail the action only if configured to.
-NOT_EXECUTED_STATUSES = ("skipped", "not_runnable")
+# Runs with these statuses were never executed. Maps each to whether it fails the action by
+# default, which INPUT_FAIL_ON_<STATUS> overrides.
+NOT_EXECUTED_STATUSES = {"skipped": "false", "not_runnable": "true"}
 FINISHED_STATUSES = ("passed", *FAILED_STATUSES, *NOT_EXECUTED_STATUSES)
 
 
@@ -37,8 +38,8 @@ def get_app_url() -> str:
 def _get_failing_not_executed_statuses() -> set[str]:
     """Returns the not executed statuses that should fail the action."""
     return {
-        status for status in NOT_EXECUTED_STATUSES
-        if os.getenv(f"INPUT_FAIL_ON_{status.upper()}", "false").strip().lower() == "true"
+        status for status, default in NOT_EXECUTED_STATUSES.items()
+        if os.getenv(f"INPUT_FAIL_ON_{status.upper()}", default).strip().lower() == "true"
     }
 
 
