@@ -4,6 +4,8 @@ import unittest
 from unittest.mock import patch
 
 import requests
+from dotenv import load_dotenv
+
 import runner as runner_module
 
 
@@ -13,8 +15,14 @@ class RunnerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Fetch the OpenAPI spec once for all tests."""
-        # Load OpenAPI spec for the backend.
-        response = requests.get(f"{runner_module.get_backend_url()}/openapi.json", timeout=10)
+        # The backend only serves its spec to a signed-in user.
+        load_dotenv()
+        session = requests.Session()
+        if not runner_module._login_service_account(
+                session, os.environ["CJ_PROD_SERVICE_ACCOUNT_KEY"]):
+            raise RuntimeError("Failed to login the CJ_PROD_SERVICE_ACCOUNT_KEY service account.")
+        response = session.get(f"{runner_module.get_backend_url()}/openapi.json", timeout=10)
+        session.close()
         response.raise_for_status()
         cls.openapi_spec = response.json()
 
