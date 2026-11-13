@@ -71,6 +71,7 @@ run-critical-journey:
 | `app_file_path` | Yes | | Path to the app to upload: an `.apk`, an `.ipa` or a `.zip` holding an iOS simulator build. |
 | `app_name` | No | | Name of the app to upload the file to. Defaults to the app with the same package or bundle ID, or a new app named after it. |
 | `app_tags` | No | `latest` | Tags of the app to point at the uploaded file, separated by commas, e.g. `latest, 1.4.3`. Setting tags replaces the default, so list `latest` too to keep moving it. |
+| `organization_id` | No | | ID of the organization to upload the app to. Needed only if the service account belongs to more than one. |
 
 ```yaml
 include:

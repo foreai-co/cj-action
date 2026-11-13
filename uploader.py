@@ -17,15 +17,21 @@ def _get_app_tags_from_env() -> list[str]:
 
 
 def _get_org_id(session: requests.Session) -> str:
-    """Returns the ID of the organization the signed-in service account belongs to."""
+    """Returns the organization to upload to: the given one, else the service account's only one."""
+    org_id = os.getenv("INPUT_ORGANIZATION_ID", "").strip()
+    if org_id:
+        return org_id
     response = session.get(f"{runner.get_backend_url()}/auth/get-user-organizations")
     if response.status_code != 200:
         raise ValueError(f"Failed to get the service account's organization: {response.text}")
-    org_ids = [details["organization"]["org_id"] for details in response.json()]
-    if len(org_ids) != 1:
+    orgs = [details["organization"] for details in response.json()]
+    if len(orgs) != 1:
+        org_list = ", ".join(f"{org['name']} ({org['org_id']})" for org in orgs)
         raise ValueError(
-            f"Expected the service account to belong to one organization, found {len(org_ids)}.")
-    return org_ids[0]
+            f"The service account belongs to {len(orgs)} organizations, set organization_id "
+            f"to the one to upload to: {org_list}"
+        )
+    return orgs[0]["org_id"]
 
 
 def _upload_app_file(

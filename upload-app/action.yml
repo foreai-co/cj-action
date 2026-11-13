@@ -29,6 +29,13 @@ inputs:
     required: false
     default: 'latest'
 
+  organization_id:
+    description: >-
+      ID of the organization to upload the app to. Needed only if the service account
+      belongs to more than one.
+    required: false
+    default: ''
+
   backend_url_override:
     description: 'Override the Critical Journey backend URL. Leave empty; for internal use only.'
     required: false

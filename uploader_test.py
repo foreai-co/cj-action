@@ -24,11 +24,14 @@ class UploaderTests(unittest.TestCase):
         """Clean up the OpenAPI spec."""
         cls.openapi_spec = None
 
-    def _upload(self, env: dict) -> tuple[tuple[bool, str, dict[str, str]], list]:
-        """Uploads an app file to a fake backend.
+    def _upload(
+            self, env: dict, org_ids: tuple[str, ...] = ("org-id",)
+        ) -> tuple[tuple[bool, str, dict[str, str]], list, list]:
+        """Uploads an app file to a fake backend whose service account is in the given orgs.
 
         Returns:
-            The upload's result and the (url, kwargs) of each POST request.
+            The upload's result, the (url, kwargs) of each POST request and the URL of each
+            GET request.
         """
         session = requests.Session()
         openapi_spec = self.openapi_spec
@@ -51,7 +54,10 @@ class UploaderTests(unittest.TestCase):
                 if self.url_path == "/auth/login_service_account":
                     return "jwt-token"
                 if self.url_path == "/auth/get-user-organizations":
-                    return [{"organization": {"org_id": "org-id", "name": "Org"}}]
+                    return [
+                        {"organization": {"org_id": org_id, "name": f"Org {org_id}"}}
+                        for org_id in org_ids
+                    ]
                 if self.url_path == "/organizations/org-id/app-files":
                     return {
                         "app_file_id": "app-file-id",
@@ -61,6 +67,7 @@ class UploaderTests(unittest.TestCase):
                 raise ValueError(f"Unexpected URL path: {self.url_path}")
 
         posts = []
+        gets = []
 
         def fake_post(url, **kwargs):
             files = kwargs.get("files")
@@ -76,6 +83,7 @@ class UploaderTests(unittest.TestCase):
 
         def fake_get(url, **kwargs):
             del kwargs
+            gets.append(url)
             return FakeResponse(url, "GET")
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -90,11 +98,11 @@ class UploaderTests(unittest.TestCase):
                 with patch.object(session, "post", side_effect=fake_post):
                     with patch.object(session, "get", side_effect=fake_get):
                         result = uploader_module.upload(session)
-        return result, posts
+        return result, posts, gets
 
     def test_upload_app_file(self):
         """Test that the app file is uploaded as a multipart form to the org's app files."""
-        (result, msg, outputs), posts = self._upload({
+        (result, msg, outputs), posts, _ = self._upload({
             "INPUT_APP_NAME": "My App",
             "INPUT_APP_TAGS": "latest, 1.4.3\nnightly",
         })
@@ -128,9 +136,29 @@ class UploaderTests(unittest.TestCase):
         ]
         for env, expected_tags in cases:
             with self.subTest(env=env):
-                (result, msg, _), posts = self._upload(env)
+                (result, msg, _), posts, _ = self._upload(env)
                 self.assertTrue(result, msg)
                 self.assertEqual(posts[-1][1]["data"], {"file_name": "app.apk", "tags": expected_tags})
+
+    def test_upload_to_organization(self):
+        """Test that the upload goes to the given org, else the service account's only one."""
+        upload_url = f"{runner_module.get_backend_url()}/organizations/org-id/app-files"
+        orgs_url = f"{runner_module.get_backend_url()}/auth/get-user-organizations"
+
+        (result, msg, _), posts, gets = self._upload(
+            {"INPUT_ORGANIZATION_ID": "org-id"}, org_ids=("org-id", "other-org-id"))
+        self.assertTrue(result, msg)
+        self.assertEqual(posts[-1][0], upload_url)
+        self.assertNotIn(orgs_url, gets)
+
+        (result, msg, _), posts, gets = self._upload({}, org_ids=("org-id", "other-org-id"))
+        self.assertFalse(result)
+        self.assertEqual(
+            msg,
+            "Failed: The service account belongs to 2 organizations, set organization_id to "
+            "the one to upload to: Org org-id (org-id), Org other-org-id (other-org-id)",
+        )
+        self.assertNotIn(upload_url, [url for url, _ in posts])
 
     def test_invalid_inputs(self):
         """Test that missing inputs fail the upload before anything is sent."""
