@@ -141,7 +141,7 @@ def _upload_app_file(
     bundle id, or a new app named after it.
 
     Returns:
-        The uploaded app file, see the backend's AppFile.
+        The uploaded app file.
     """
     if not os.path.isfile(app_file_path):
         raise ValueError(f"App file not found: {app_file_path}")
