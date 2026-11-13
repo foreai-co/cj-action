@@ -41,6 +41,46 @@ inputs:
     required: false
     default: ''
 
+  app_file_path:
+    description: >-
+      Path to a mobile app to upload before running: an .apk, an .ipa or a .zip holding an
+      iOS simulator build. Relative paths are relative to the workspace. If test_id or
+      test_suite_id is set, the tests run on the uploaded file unless an app override is set.
+    required: false
+    default: ''
+
+  app_name:
+    description: >-
+      Name of the app to upload the file to. Defaults to the app with the same package or
+      bundle ID, or a new app named after it.
+    required: false
+    default: ''
+
+  app_tags:
+    description: 'Tags of the app to point at the uploaded file, separated by commas, e.g. "latest, 1.4.3".'
+    required: false
+    default: ''
+
+  app_file_id_override:
+    description: 'ID of the app file to run the tests on instead of their own app.'
+    required: false
+    default: ''
+
+  app_name_override:
+    description: 'Name of the app to run the tests on instead of their own app. Needs app_platform_override.'
+    required: false
+    default: ''
+
+  app_platform_override:
+    description: 'Platform of the app set in app_name_override: android or ios.'
+    required: false
+    default: ''
+
+  app_tag_override:
+    description: 'Tag of the app set in app_name_override whose file to run the tests on. Defaults to latest.'
+    required: false
+    default: ''
+
   create_issue_on_failure:
     description: 'If true, creates a GitHub issue when the test run fails.'
     required: false
@@ -70,6 +110,8 @@ inputs:
 outputs:
   result:
     description: 'A message that includes information about the status of the run.'
+  app_file_id:
+    description: 'ID of the app file uploaded from app_file_path, if any.'
 
 runs:
   using: 'docker'

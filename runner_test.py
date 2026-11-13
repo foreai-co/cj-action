@@ -1,5 +1,6 @@
 """Unittest version of tests for the runner module."""
 import os
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -231,6 +232,8 @@ class RunnerTests(unittest.TestCase):
                 ' {"kind": "non_secret", "value": "bar"}}'
             ),
             "INPUT_BROWSER_TYPE_OVERRIDE": "firefox",
+            "INPUT_APP_NAME_OVERRIDE": "My App",
+            "INPUT_APP_PLATFORM_OVERRIDE": "android",
         }, clear=True):
             with patch.object(session, "post", side_effect=fake_post):
                 with patch.object(session, "get", side_effect=fake_get):
@@ -405,6 +408,192 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(result, success)
                 self.assertEqual(output_msg, msg)
                 self.assertEqual(failed_run_ids, ids)
+
+    def test_app_override_from_env(self):
+        """Test how the app overrides are read into run settings."""
+        cases = [
+            ({}, None),
+            ({"INPUT_APP_FILE_ID_OVERRIDE": "file-id"},
+             {"kind": "app_file_id", "app_file_id": "file-id"}),
+            ({"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "Android"},
+             {"kind": "app_tag", "app_name": "My App", "platform": "android", "tag": "latest"}),
+            ({"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "ios",
+              "INPUT_APP_TAG_OVERRIDE": "1.4.3"},
+             {"kind": "app_tag", "app_name": "My App", "platform": "ios", "tag": "1.4.3"}),
+        ]
+        for env, expected in cases:
+            with self.subTest(env=env):
+                with patch.dict(os.environ, env, clear=True):
+                    run_settings = runner_module._create_run_settings_from_env()
+                self.assertEqual(run_settings.get("mobile_app_override"), expected)
+
+    def test_invalid_app_override_from_env(self):
+        """Test that inconsistent app overrides are rejected."""
+        cases = [
+            {"INPUT_APP_FILE_ID_OVERRIDE": "file-id", "INPUT_APP_NAME_OVERRIDE": "My App"},
+            {"INPUT_APP_NAME_OVERRIDE": "My App"},
+            {"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "windows"},
+            {"INPUT_APP_PLATFORM_OVERRIDE": "android"},
+            {"INPUT_APP_TAG_OVERRIDE": "latest"},
+        ]
+        for env in cases:
+            with self.subTest(env=env):
+                with patch.dict(os.environ, {"INPUT_SERVICE_ACCOUNT_KEY": "test_key", **env},
+                                clear=True):
+                    result, msg, _ = runner_module.run(requests.Session())
+                self.assertFalse(result)
+                self.assertTrue(msg.startswith("Failed: "), msg)
+
+    def _run_with_app_upload(self, env: dict) -> tuple[tuple[bool, str, list[str]], dict, list]:
+        """Runs the action against a fake backend that accepts an app upload.
+
+        Returns:
+            The run's result, its outputs and the (url, kwargs) of each POST request.
+        """
+        session = requests.Session()
+        openapi_spec = self.openapi_spec
+        backend_url = runner_module.get_backend_url()
+
+        class FakeResponse:
+            """Fake response for the organization, app upload and test run endpoints."""
+            text = ""
+
+            def __init__(self, url, method):
+                self.url_path = url.split(backend_url)[-1]
+                path_template = (
+                    self.url_path.replace("org-id", "{org_id}")
+                    .replace("test-case-id", "{test_case_id}")
+                    .replace("test-run-id", "{test_run_id}")
+                )
+                if method.lower() not in openapi_spec["paths"].get(path_template, {}):
+                    raise ValueError(f"{method} {path_template} is not in the OpenAPI spec")
+                self.status_code = 201 if self.url_path in (
+                    "/organizations/org-id/app-files", "/test-run/test-case-id") else 200
+
+            def json(self):
+                """Return a JSON response."""
+                if self.url_path == "/auth/login_service_account":
+                    return "jwt-token"
+                if self.url_path == "/auth/get-user-organizations":
+                    return [{"organization": {"org_id": "org-id", "name": "Org"}}]
+                if self.url_path == "/organizations/org-id/app-files":
+                    return {
+                        "app_file_id": "app-file-id",
+                        "app_name": "My App",
+                        "file_name": "app.apk",
+                    }
+                if self.url_path == "/test-run/test-case-id":
+                    return "test-run-id"
+                if self.url_path == "/test-run/test-run-id":
+                    return {"status": "passed"}
+                raise ValueError(f"Unexpected URL path: {self.url_path}")
+
+        posts = []
+
+        def fake_post(url, **kwargs):
+            files = kwargs.get("files")
+            # The file is closed once the upload returns.
+            posts.append((url, {
+                **kwargs,
+                "files": files and {
+                    name: (file_name, file.read(), content_type)
+                    for name, (file_name, file, content_type) in files.items()
+                },
+            }))
+            return FakeResponse(url, "POST")
+
+        def fake_get(url, **kwargs):
+            del kwargs
+            return FakeResponse(url, "GET")
+
+        outputs = {}
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            app_file_path = os.path.join(tmp_dir, "app.apk")
+            with open(app_file_path, "wb") as app_file:
+                app_file.write(b"apk-bytes")
+            with patch.dict(os.environ, {
+                "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
+                "INPUT_APP_FILE_PATH": app_file_path,
+                **env,
+            }, clear=True):
+                with patch.object(session, "post", side_effect=fake_post):
+                    with patch.object(session, "get", side_effect=fake_get):
+                        result = runner_module.run(session, outputs)
+        return result, outputs, posts
+
+    def test_upload_app_file_only(self):
+        """Test that the app file is uploaded as a multipart form to the org's app files."""
+        (result, msg, _), outputs, posts = self._run_with_app_upload({
+            "INPUT_APP_NAME": "My App",
+            "INPUT_APP_TAGS": "latest, 1.4.3\nnightly",
+        })
+        self.assertTrue(result, msg)
+        self.assertEqual(msg, "Uploaded app.apk to app My App as app file app-file-id.")
+        self.assertEqual(outputs, {"app_file_id": "app-file-id"})
+
+        upload_url, upload_kwargs = posts[-1]
+        self.assertEqual(
+            upload_url, f"{runner_module.get_backend_url()}/organizations/org-id/app-files")
+        self.assertEqual(upload_kwargs["data"], {
+            "file_name": "app.apk",
+            "app_name": "My App",
+            "tags": ["latest", "1.4.3", "nightly"],
+        })
+        self.assertEqual(
+            upload_kwargs["files"], {"file": ("app.apk", b"apk-bytes", "application/octet-stream")})
+        self.assertEqual(upload_kwargs["headers"], {"Content-Type": None})
+
+        form_schema = self.openapi_spec["components"]["schemas"][
+            "Body_create_app_file_organizations__org_id__app_files_post"]
+        self.assertLessEqual(
+            {*upload_kwargs["data"], *upload_kwargs["files"]}, form_schema["properties"].keys())
+
+    def test_upload_app_file_and_run_on_it(self):
+        """Test that the tests run on the uploaded app file, unless told to run another app."""
+        cases = [
+            ({}, {"kind": "app_file_id", "app_file_id": "app-file-id"}),
+            ({"INPUT_APP_FILE_ID_OVERRIDE": "other-file-id"},
+             {"kind": "app_file_id", "app_file_id": "other-file-id"}),
+        ]
+        for env, expected_app in cases:
+            with self.subTest(env=env):
+                (result, msg, _), outputs, posts = self._run_with_app_upload(
+                    {"INPUT_TEST_ID": "test-case-id", **env})
+                self.assertTrue(result, msg)
+                self.assertEqual(
+                    msg, "Uploaded app.apk to app My App as app file app-file-id. Test passed!")
+                self.assertEqual(outputs, {"app_file_id": "app-file-id"})
+                run_url, run_kwargs = posts[-1]
+                self.assertEqual(run_url, f"{runner_module.get_backend_url()}/test-run/test-case-id")
+                settings = run_kwargs["json"]["settings"]
+                self.assertEqual(settings, {"mobile_app_override": expected_app})
+                self.assertIn(
+                    "mobile_app_override",
+                    self.openapi_spec["components"]["schemas"]["RunSettings-Input"]["properties"],
+                )
+
+    def test_upload_missing_app_file(self):
+        """Test that a missing app file fails the action before anything is run."""
+        session = requests.Session()
+
+        class FakeResponse:
+            """Fake response for the login endpoint."""
+            status_code = 200
+
+            def json(self):
+                """Return a JSON response."""
+                return "jwt-token"
+
+        with patch.dict(os.environ, {
+            "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
+            "INPUT_TEST_ID": "test-case-id",
+            "INPUT_APP_FILE_PATH": "does/not/exist.apk",
+        }, clear=True):
+            with patch.object(session, "post", return_value=FakeResponse()) as post:
+                result, msg, _ = runner_module.run(session)
+        self.assertFalse(result)
+        self.assertEqual(msg, "Failed: App file not found: does/not/exist.apk")
+        self.assertEqual(post.call_count, 1)  # Only the login.
 
 if __name__ == "__main__":
     unittest.main()

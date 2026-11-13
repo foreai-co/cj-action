@@ -9,7 +9,8 @@ import runner
 
 
 with requests.Session() as session:
-    success, output_msg, failed_run_ids = runner.run(session)
+    outputs: dict[str, str] = {}
+    success, output_msg, failed_run_ids = runner.run(session, outputs)
 
     if (not success and failed_run_ids and
         os.getenv("INPUT_CREATE_ISSUE_ON_FAILURE", "false").lower() == "true"):
@@ -32,12 +33,18 @@ def escape_github_output(value: str) -> str:
     return value
 
 # Set the output - even for failures.
+outputs["result"] = output_msg
 github_output = os.getenv("GITHUB_OUTPUT")
 if github_output:
     with open(github_output, "a", encoding="utf-8") as fh:
-        print(f"result={escape_github_output(output_msg)}", file=fh)
+        for name, value in outputs.items():
+            print(f"{name}={escape_github_output(value)}", file=fh)
 else:
-    print(escape_github_output(output_msg))
+    for name, value in outputs.items():
+        if name == "result":
+            print(escape_github_output(value))
+        else:
+            print(f"{name}={escape_github_output(value)}")
 
 if not success:
     sys.exit(output_msg)
