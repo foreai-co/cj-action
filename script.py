@@ -4,6 +4,7 @@ import sys
 
 import requests
 
+import github_output
 import issue_utils
 import runner
 
@@ -24,20 +25,8 @@ with requests.Session() as session:
                 print("Warning: No token found for issue creation; cannot create issue.")
 
 
-def escape_github_output(value: str) -> str:
-    """Escape special characters for GitHub Actions output."""
-    value = value.replace("%", "%25")
-    value = value.replace("\r", "%0D")
-    value = value.replace("\n", "%0A")
-    return value
-
 # Set the output - even for failures.
-github_output = os.getenv("GITHUB_OUTPUT")
-if github_output:
-    with open(github_output, "a", encoding="utf-8") as fh:
-        print(f"result={escape_github_output(output_msg)}", file=fh)
-else:
-    print(escape_github_output(output_msg))
+github_output.set_outputs({"result": output_msg})
 
 if not success:
     sys.exit(output_msg)

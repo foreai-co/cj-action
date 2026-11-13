@@ -9,22 +9,26 @@ from dotenv import load_dotenv
 import runner as runner_module
 
 
+def fetch_openapi_spec() -> dict:
+    """Fetches the backend's OpenAPI spec, to check the requests the actions send against."""
+    # The backend only serves its spec to a signed-in user.
+    load_dotenv()
+    with requests.Session() as session:
+        if not runner_module.login_service_account(
+                session, os.environ["CJ_PROD_SERVICE_ACCOUNT_KEY"]):
+            raise RuntimeError("Failed to login the CJ_PROD_SERVICE_ACCOUNT_KEY service account.")
+        response = session.get(f"{runner_module.get_backend_url()}/openapi.json", timeout=10)
+    response.raise_for_status()
+    return response.json()
+
+
 class RunnerTests(unittest.TestCase):
     """Tests for the runner module."""
 
     @classmethod
     def setUpClass(cls):
         """Fetch the OpenAPI spec once for all tests."""
-        # The backend only serves its spec to a signed-in user.
-        load_dotenv()
-        session = requests.Session()
-        if not runner_module._login_service_account(
-                session, os.environ["CJ_PROD_SERVICE_ACCOUNT_KEY"]):
-            raise RuntimeError("Failed to login the CJ_PROD_SERVICE_ACCOUNT_KEY service account.")
-        response = session.get(f"{runner_module.get_backend_url()}/openapi.json", timeout=10)
-        session.close()
-        response.raise_for_status()
-        cls.openapi_spec = response.json()
+        cls.openapi_spec = fetch_openapi_spec()
 
     @classmethod
     def tearDownClass(cls):
@@ -231,6 +235,8 @@ class RunnerTests(unittest.TestCase):
                 ' {"kind": "non_secret", "value": "bar"}}'
             ),
             "INPUT_BROWSER_TYPE_OVERRIDE": "firefox",
+            "INPUT_APP_NAME_OVERRIDE": "My App",
+            "INPUT_APP_PLATFORM_OVERRIDE": "android",
         }, clear=True):
             with patch.object(session, "post", side_effect=fake_post):
                 with patch.object(session, "get", side_effect=fake_get):
@@ -405,6 +411,42 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(result, success)
                 self.assertEqual(output_msg, msg)
                 self.assertEqual(failed_run_ids, ids)
+
+    def test_app_override_from_env(self):
+        """Test how the app overrides are read into run settings."""
+        cases = [
+            ({}, None),
+            ({"INPUT_APP_FILE_ID_OVERRIDE": "file-id"},
+             {"kind": "app_file_id", "app_file_id": "file-id"}),
+            ({"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "Android"},
+             {"kind": "app_tag", "app_name": "My App", "platform": "android", "tag": "latest"}),
+            ({"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "ios",
+              "INPUT_APP_TAG_OVERRIDE": "1.4.3"},
+             {"kind": "app_tag", "app_name": "My App", "platform": "ios", "tag": "1.4.3"}),
+        ]
+        for env, expected in cases:
+            with self.subTest(env=env):
+                with patch.dict(os.environ, env, clear=True):
+                    run_settings = runner_module._create_run_settings_from_env()
+                self.assertEqual(run_settings.get("mobile_app_override"), expected)
+
+    def test_invalid_app_override_from_env(self):
+        """Test that inconsistent app overrides are rejected."""
+        cases = [
+            {"INPUT_APP_FILE_ID_OVERRIDE": "file-id", "INPUT_APP_NAME_OVERRIDE": "My App"},
+            {"INPUT_APP_NAME_OVERRIDE": "My App"},
+            {"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "windows"},
+            {"INPUT_APP_PLATFORM_OVERRIDE": "android"},
+            {"INPUT_APP_TAG_OVERRIDE": "latest"},
+        ]
+        for env in cases:
+            with self.subTest(env=env):
+                with patch.dict(os.environ, {"INPUT_SERVICE_ACCOUNT_KEY": "test_key", **env},
+                                clear=True):
+                    result, msg, _ = runner_module.run(requests.Session())
+                self.assertFalse(result)
+                self.assertTrue(msg.startswith("Failed: "), msg)
+
 
 if __name__ == "__main__":
     unittest.main()
