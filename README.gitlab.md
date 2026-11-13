@@ -68,7 +68,7 @@ run-critical-journey:
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `service_account_key` | Yes | | Your service account key to access fore.ai Critical Journey. |
-| `app_file_path` | Yes | | Path to the app to upload: an `.apk`, an `.ipa` or a `.zip` holding an iOS simulator build. |
+| `app_file_path` | Yes | | Path to the app to upload: an `.apk`, an `.ipa` or a `.zip` holding an iOS simulator build. The file name may only hold lowercase letters, digits and underscores, plus one dot before the extension, and be at most 100 characters long, e.g. `my_app_1_4_3.apk`. |
 | `app_name` | No | | Name of the app to upload the file to. Defaults to the app with the same package or bundle ID, or a new app named after it. |
 | `app_tags` | No | `latest` | Tags of the app to point at the uploaded file, separated by commas, e.g. `latest, 1.4.3`. Setting tags replaces the default, so list `latest` too to keep moving it. |
 | `organization_id` | No | | ID of the organization to upload the app to. Needed only if the service account belongs to more than one. |
@@ -78,7 +78,7 @@ include:
   - component: gitlab.com/foreai-co/cj-action/upload-app@<version>
     inputs:
       service_account_key: $CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY
-      app_file_path: "app/build/outputs/apk/debug/app-debug.apk"
+      app_file_path: "my_app.apk"
       app_name: "My App"
       app_tags: "latest, $CI_COMMIT_SHORT_SHA"
 ```

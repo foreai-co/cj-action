@@ -11,7 +11,9 @@ inputs:
   app_file_path:
     description: >-
       Path to the app to upload: an .apk, an .ipa or a .zip holding an iOS simulator build.
-      Relative paths are relative to the workspace.
+      Relative paths are relative to the workspace. The file name may only hold lowercase
+      letters, digits and underscores, plus one dot before the extension, and be at most
+      100 characters long, e.g. my_app_1_4_3.apk.
     required: true
     default: ''
 
