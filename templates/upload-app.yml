@@ -1,0 +1,30 @@
+spec:
+  inputs:
+    service_account_key:
+      description: "Your Critical Journey service account key. Store this as a CI/CD variable."
+    app_file_path:
+      description: "Path to the app to upload: an .apk, an .ipa or a .zip holding an iOS simulator build."
+    app_name:
+      default: ""
+      description: "Name of the app to upload the file to. Defaults to the app with the same package or bundle ID, or a new app named after it."
+    app_tags:
+      default: "latest"
+      description: "Tags of the app to point at the uploaded file, separated by commas, e.g. 'latest, 1.4.3'. Defaults to latest. Setting tags replaces the default, so list latest too to keep moving it."
+    backend_url_override:
+      default: ""
+      description: "Override the Critical Journey backend URL. Leave empty; for internal use only."
+
+---
+
+upload-app:
+  image:
+    name: registry.gitlab.com/foreai-co/cj-action:latest
+    entrypoint: ["python", "/app/upload_app.py"]
+  variables:
+    INPUT_SERVICE_ACCOUNT_KEY: $[[ inputs.service_account_key ]]
+    INPUT_APP_FILE_PATH: $[[ inputs.app_file_path ]]
+    INPUT_APP_NAME: $[[ inputs.app_name ]]
+    INPUT_APP_TAGS: $[[ inputs.app_tags ]]
+    INPUT_BACKEND_URL_OVERRIDE: $[[ inputs.backend_url_override ]]
+  script:
+    - echo "Critical Journey app upload started"

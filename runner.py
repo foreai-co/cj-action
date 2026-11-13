@@ -2,7 +2,6 @@
 import datetime
 import json
 import os
-import re
 import time
 from math import ceil
 
@@ -111,63 +110,7 @@ def _create_run_settings_from_env() -> dict:
     return run_settings
 
 
-def _get_app_tags_from_env() -> list[str]:
-    """Reads the tags to point at an uploaded app file, separated by commas or newlines.
-
-    Defaults to the latest tag, so tests that run on it pick up the upload.
-    """
-    tags = os.getenv("INPUT_APP_TAGS", DEFAULT_APP_TAG)
-    return [tag.strip() for tag in re.split(r"[,\n]", tags) if tag.strip()]
-
-
-def _get_org_id(session: requests.Session) -> str:
-    """Returns the ID of the organization the signed-in service account belongs to."""
-    response = session.get(f"{get_backend_url()}/auth/get-user-organizations")
-    if response.status_code != 200:
-        raise ValueError(f"Failed to get the service account's organization: {response.text}")
-    org_ids = [details["organization"]["org_id"] for details in response.json()]
-    if len(org_ids) != 1:
-        raise ValueError(
-            f"Expected the service account to belong to one organization, found {len(org_ids)}.")
-    return org_ids[0]
-
-
-def _upload_app_file(
-        session: requests.Session,
-        app_file_path: str,
-        app_name: str,
-        tags: list[str]
-    ) -> dict:
-    """Uploads an app file (.apk, .ipa or a zipped iOS simulator build) to the org's apps.
-
-    Without an app name, the backend files it under the app with the same package or
-    bundle id, or a new app named after it.
-
-    Returns:
-        The uploaded app file.
-    """
-    if not os.path.isfile(app_file_path):
-        raise ValueError(f"App file not found: {app_file_path}")
-    org_id = _get_org_id(session)
-    file_name = os.path.basename(app_file_path)
-    form = {"file_name": file_name, "tags": tags}
-    if app_name:
-        form["app_name"] = app_name
-    with open(app_file_path, "rb") as app_file:
-        response = session.post(
-            f"{get_backend_url()}/organizations/{org_id}/app-files",
-            data=form,
-            files={"file": (file_name, app_file, "application/octet-stream")},
-            # The session sends JSON by default; None drops its Content-Type so that
-            # requests sets the multipart one.
-            headers={"Content-Type": None},
-        )
-    if response.status_code != 201:
-        raise ValueError(f"Failed to upload app file: {response.text}")
-    return response.json()
-
-
-def _login_service_account(session: requests.Session, service_account_key: str) -> bool:
+def login_service_account(session: requests.Session, service_account_key: str) -> bool:
     """Logs in the service account and updates session headers."""
     session.headers.update(_get_headers(service_account_key))
     response = session.post(f"{get_backend_url()}/auth/login_service_account")
@@ -338,15 +281,10 @@ def _handle_bulk_test_run(
     return False, "Timed out waiting for test suite result.", []
 
 
-def run(
-        session: requests.Session,
-        outputs: dict[str, str] | None = None
-    ) -> tuple[bool, str, list[str]]:
+def run(session: requests.Session) -> tuple[bool, str, list[str]]:
     """Business logic for the action.
     Args:
         session: requests.Session object. The caller is responsible for closing it.
-        outputs: Filled with the action's outputs other than the result message, e.g.
-            the uploaded ``app_file_id``.
 
     Returns:
         Tuple[bool, str, list[str]]:
@@ -357,9 +295,6 @@ def run(
     test_id = os.getenv("INPUT_TEST_ID", "")
     collection_id = os.getenv("INPUT_TEST_SUITE_ID", "")
     service_account_key = os.getenv("INPUT_SERVICE_ACCOUNT_KEY", "")
-    app_file_path = os.getenv("INPUT_APP_FILE_PATH", "").strip()
-    if outputs is None:
-        outputs = {}
 
     wait_timeout_seconds = int(os.getenv("INPUT_WAIT_TIMEOUT_SECONDS", "300"))
     assert 30 <= wait_timeout_seconds <= 900, (
@@ -377,52 +312,28 @@ def run(
         return False, f"Failed: {e}", []
 
     try:
-        if not _login_service_account(session, service_account_key):
+        if not login_service_account(session, service_account_key):
             return False, "Failed to login service account.", []
 
-        if not test_id and not collection_id and not app_file_path:
-            return False, (
-                "Failed: Either test_id, test_suite_id or app_file_path should be provided."
-            ), []
-
-        upload_msg = ""
-        if app_file_path:
-            app_file = _upload_app_file(
-                session,
-                app_file_path,
-                app_name=os.getenv("INPUT_APP_NAME", "").strip(),
-                tags=_get_app_tags_from_env(),
-            )
-            outputs["app_file_id"] = app_file["app_file_id"]
-            upload_msg = (
-                f"Uploaded {app_file['file_name']} to app {app_file['app_name']} "
-                f"as app file {app_file['app_file_id']}."
-            )
-            # Test the build just uploaded, unless told to run another app.
-            run_settings.setdefault(
-                "mobile_app_override",
-                {"kind": "app_file_id", "app_file_id": app_file["app_file_id"]},
-            )
-            if not test_id and not collection_id:
-                return True, upload_msg, []
-
         if test_id:
-            success, msg, failed_run_ids = _handle_single_test_run(
+            return _handle_single_test_run(
                 session=session,
                 test_case_id=test_id,
                 run_settings=run_settings,
                 max_fetches=max_fetches,
                 poll_every_seconds=poll_every_seconds,
             )
-        else:
-            success, msg, failed_run_ids = _handle_bulk_test_run(
-                session=session,
-                collection_id=collection_id,
-                run_settings=run_settings,
-                max_fetches=max_fetches,
-                poll_every_seconds=poll_every_seconds,
-            )
-        return success, " ".join(filter(None, (upload_msg, msg))), failed_run_ids
+
+        if not collection_id:
+            return False, "Failed: Either test_id or test_suite_id should be provided.", []
+
+        return _handle_bulk_test_run(
+            session=session,
+            collection_id=collection_id,
+            run_settings=run_settings,
+            max_fetches=max_fetches,
+            poll_every_seconds=poll_every_seconds,
+        )
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         return False, f"Failed: {e}", []
