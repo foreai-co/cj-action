@@ -548,6 +548,19 @@ class RunnerTests(unittest.TestCase):
         self.assertLessEqual(
             {*upload_kwargs["data"], *upload_kwargs["files"]}, form_schema["properties"].keys())
 
+    def test_upload_app_file_tags(self):
+        """Test that an upload is tagged latest unless given other tags."""
+        cases = [
+            ({}, ["latest"]),
+            ({"INPUT_APP_TAGS": "1.4.3"}, ["1.4.3"]),
+            ({"INPUT_APP_TAGS": ""}, []),
+        ]
+        for env, expected_tags in cases:
+            with self.subTest(env=env):
+                (result, msg, _), _, posts = self._run_with_app_upload(env)
+                self.assertTrue(result, msg)
+                self.assertEqual(posts[-1][1]["data"], {"file_name": "app.apk", "tags": expected_tags})
+
     def test_upload_app_file_and_run_on_it(self):
         """Test that the tests run on the uploaded app file, unless told to run another app."""
         cases = [

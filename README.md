@@ -13,7 +13,7 @@ This GitHub Action runs the critical journey script inside a Docker container.
 - `browser_type_override`: (Optional) Browser engine to run the test with: 'chromium', 'firefox', or 'webkit'. Defaults to 'chromium' if not specified.
 - `app_file_path`: (Optional) Path to a mobile app to upload before running: an `.apk`, an `.ipa` or a `.zip` holding an iOS simulator build. Relative paths are relative to the workspace. With only this set, the action just uploads the app. If `test_id` or `test_suite_id` is also set, the tests run on the uploaded file unless one of the app overrides below is set.
 - `app_name`: (Optional) Name of the app to upload the file to. Defaults to the app with the same package or bundle ID, or a new app named after it.
-- `app_tags`: (Optional) Tags of the app to point at the uploaded file, separated by commas, e.g. `latest, 1.4.3`. A tag the app already has is moved to the new file.
+- `app_tags`: (Optional) Tags of the app to point at the uploaded file, separated by commas, e.g. `latest, 1.4.3`. A tag the app already has is moved to the new file. Defaults to `latest`. Setting tags replaces the default, so list `latest` too to keep moving it.
 - `app_file_id_override`: (Optional) ID of the app file to run the tests on instead of their own app.
 - `app_name_override`: (Optional) Name of the app to run the tests on instead of their own app. Requires `app_platform_override`. Cannot be combined with `app_file_id_override`.
 - `app_platform_override`: (Optional) Platform of the app in `app_name_override`: `android` or `ios`.

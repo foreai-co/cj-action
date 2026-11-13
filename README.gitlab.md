@@ -15,7 +15,7 @@ This GitLab CI/CD component runs the Critical Journey script inside a Docker con
 | `browser_type_override` | No | `chromium` | Browser engine to run the test with: `chromium`, `firefox`, or `webkit`. |
 | `app_file_path` | No | | Path to a mobile app to upload before running: an `.apk`, an `.ipa` or a `.zip` holding an iOS simulator build. With only this set, the job just uploads the app. If `test_id` or `test_suite_id` is also set, the tests run on the uploaded file unless an app override is set. |
 | `app_name` | No | | Name of the app to upload the file to. Defaults to the app with the same package or bundle ID, or a new app named after it. |
-| `app_tags` | No | | Tags of the app to point at the uploaded file, separated by commas, e.g. `latest, 1.4.3`. |
+| `app_tags` | No | `latest` | Tags of the app to point at the uploaded file, separated by commas, e.g. `latest, 1.4.3`. Setting tags replaces the default, so list `latest` too to keep moving it. |
 | `app_file_id_override` | No | | ID of the app file to run the tests on instead of their own app. |
 | `app_name_override` | No | | Name of the app to run the tests on instead of their own app. Requires `app_platform_override`. |
 | `app_platform_override` | No | | Platform of the app in `app_name_override`: `android` or `ios`. |

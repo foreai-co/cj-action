@@ -27,8 +27,8 @@ spec:
       default: ""
       description: "Name of the app to upload the file to. Defaults to the app with the same package or bundle ID, or a new app named after it."
     app_tags:
-      default: ""
-      description: "Tags of the app to point at the uploaded file, separated by commas, e.g. 'latest, 1.4.3'."
+      default: "latest"
+      description: "Tags of the app to point at the uploaded file, separated by commas, e.g. 'latest, 1.4.3'. Defaults to latest. Setting tags replaces the default, so list latest too to keep moving it."
     app_file_id_override:
       default: ""
       description: "ID of the app file to run the tests on instead of their own app."

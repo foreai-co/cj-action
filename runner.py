@@ -112,8 +112,11 @@ def _create_run_settings_from_env() -> dict:
 
 
 def _get_app_tags_from_env() -> list[str]:
-    """Reads the tags to point at an uploaded app file, separated by commas or newlines."""
-    tags = os.getenv("INPUT_APP_TAGS", "")
+    """Reads the tags to point at an uploaded app file, separated by commas or newlines.
+
+    Defaults to the latest tag, so tests that run on it pick up the upload.
+    """
+    tags = os.getenv("INPUT_APP_TAGS", DEFAULT_APP_TAG)
     return [tag.strip() for tag in re.split(r"[,\n]", tags) if tag.strip()]
 
 
