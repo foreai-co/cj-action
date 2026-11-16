@@ -41,6 +41,26 @@ inputs:
     required: false
     default: ''
 
+  app_file_id_override:
+    description: 'ID of the app file to run the tests on instead of their own app.'
+    required: false
+    default: ''
+
+  app_name_override:
+    description: 'Name of the app to run the tests on instead of their own app. Needs app_platform_override.'
+    required: false
+    default: ''
+
+  app_platform_override:
+    description: 'Platform of the app set in app_name_override: android or ios.'
+    required: false
+    default: ''
+
+  app_tag_override:
+    description: 'Tag of the app set in app_name_override whose file to run the tests on. Defaults to latest.'
+    required: false
+    default: ''
+
   create_issue_on_failure:
     description: 'If true, creates a GitHub issue when the test run fails.'
     required: false

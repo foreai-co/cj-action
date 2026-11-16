@@ -16,6 +16,9 @@ FAILED_STATUSES = ("failed", "cancelled", "aborted")
 NOT_EXECUTED_STATUSES = {"skipped": "false", "not_runnable": "true"}
 FINISHED_STATUSES = ("passed", *FAILED_STATUSES, *NOT_EXECUTED_STATUSES)
 
+APP_PLATFORMS = ("android", "ios")
+DEFAULT_APP_TAG = "latest"
+
 
 def get_backend_url() -> str:
     """Returns the backend URL, honouring an optional override.
@@ -49,6 +52,43 @@ def _get_headers(token: str) -> dict:
         "Content-Type": "application/json"
     }
 
+
+def _get_app_override_from_env() -> dict | None:
+    """Reads the app to run the tests on instead of their own, None to run their own.
+
+    The app is either one of its files, by ID, or one of its tags, by the app's name
+    and platform and the tag (``latest`` by default).
+    """
+    app_file_id = os.getenv("INPUT_APP_FILE_ID_OVERRIDE", "").strip()
+    app_name = os.getenv("INPUT_APP_NAME_OVERRIDE", "").strip()
+    platform = os.getenv("INPUT_APP_PLATFORM_OVERRIDE", "").strip().lower()
+    tag = os.getenv("INPUT_APP_TAG_OVERRIDE", "").strip()
+
+    if app_file_id:
+        if app_name or platform or tag:
+            raise ValueError(
+                "Set either app_file_id_override or app_name_override, "
+                "app_platform_override and app_tag_override, not both."
+            )
+        return {"kind": "app_file_id", "app_file_id": app_file_id}
+    if not app_name:
+        if platform or tag:
+            raise ValueError(
+                "app_platform_override and app_tag_override need app_name_override.")
+        return None
+    if platform not in APP_PLATFORMS:
+        raise ValueError(
+            f"app_platform_override must be one of {', '.join(APP_PLATFORMS)} "
+            "when app_name_override is set."
+        )
+    return {
+        "kind": "app_tag",
+        "app_name": app_name,
+        "platform": platform,
+        "tag": tag or DEFAULT_APP_TAG,
+    }
+
+
 def _create_run_settings_from_env() -> dict:
     """Creates run settings from environment variables."""
     run_settings = {}
@@ -64,9 +104,13 @@ def _create_run_settings_from_env() -> dict:
     browser_type_override = os.getenv("INPUT_BROWSER_TYPE_OVERRIDE", "")
     if browser_type_override:
         run_settings["browser_type_override"] = browser_type_override.lower()
+    app_override = _get_app_override_from_env()
+    if app_override:
+        run_settings["mobile_app_override"] = app_override
     return run_settings
 
-def _login_service_account(session: requests.Session, service_account_key: str) -> bool:
+
+def login_service_account(session: requests.Session, service_account_key: str) -> bool:
     """Logs in the service account and updates session headers."""
     session.headers.update(_get_headers(service_account_key))
     response = session.post(f"{get_backend_url()}/auth/login_service_account")
@@ -268,7 +312,7 @@ def run(session: requests.Session) -> tuple[bool, str, list[str]]:
         return False, f"Failed: {e}", []
 
     try:
-        if not _login_service_account(session, service_account_key):
+        if not login_service_account(session, service_account_key):
             return False, "Failed to login service account.", []
 
         if test_id:
