@@ -4,12 +4,19 @@ author: 'foreai-co'
 
 inputs:
   test_id:
-    description: 'ID of the test to be run.'
+    description: 'ID of the test to be run. Either this or collection_id should be provided.'
     required: false
     default: ''
   
+  collection_id:
+    description: 'ID of the collection to be run.'
+    required: false
+    default: ''
+
   test_suite_id:
-    description: 'ID of the test suite to be run.'
+    description: >-
+      Older name of collection_id, kept for existing workflows. Despite its name it takes
+      the ID of a collection. If both are set, collection_id is used.
     required: false
     default: ''
   

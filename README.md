@@ -4,8 +4,9 @@ This GitHub Action runs the critical journey script inside a Docker container.
 
 ## Inputs
 
-- `test_id`: ID of the test to be run. Either this or `test_suite_id` should be provided.
-- `test_suite_id`: ID of the test suite to be run.
+- `test_id`: ID of the test to be run. Either this or `collection_id` should be provided.
+- `collection_id`: ID of the collection to be run.
+- `test_suite_id`: Older name of `collection_id`, kept for existing workflows. Despite its name it takes the ID of a collection. If both are set, `collection_id` is used.
 - `service_account_key`: Your service account key to access fore ai Critical Journey.
 - `wait_timeout_seconds`: (Optional) Maximum number of seconds to wait for the test to complete. Default is 300 seconds. Must be between 30 and 900 seconds (inclusive).
 - `website_url_override`: (Optional) Allows overriding the base website URL used during test execution.  
@@ -47,7 +48,7 @@ jobs:
         run: echo "${{ steps.run_cj.outputs.result }}"
 ```
 
-## Example Usage for running a test suite
+## Example Usage for running a collection
 
 ```yaml
 name: Run CJ Github Action
@@ -58,11 +59,11 @@ jobs:
   my-job:
     runs-on: ubuntu-latest
     steps:
-      - name: Run Test Suite
+      - name: Run Collection
         uses: foreai-co/cj-action@v1
         id: run_cj
         with:
-          test_suite_id: 'my-test-suite-id'
+          collection_id: 'my-collection-id'
           service_account_key: ${{ secrets.CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY }}
           wait_timeout_seconds: 360  # = 6 minutes
           # Override the website url using this optional field.
@@ -89,11 +90,11 @@ jobs:
     permissions:
       issues: write  # Required to create GitHub issues on failure
     steps:
-      - name: Run Test Suite
+      - name: Run Collection
         uses: foreai-co/cj-action@v1
         id: run_cj
         with:
-          test_suite_id: 'my-test-suite-id'
+          collection_id: 'my-collection-id'
           service_account_key: ${{ secrets.CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY }}
           create_issue_on_failure: 'true'
         env:
@@ -108,10 +109,10 @@ jobs:
 Tests run on their own app. Overriding it is optional: tests that use their app's `latest` tag already run on the newest file tagged `latest`.
 
 ```yaml
-      - name: Run the test suite on the app's staging build
+      - name: Run the collection on the app's staging build
         uses: foreai-co/cj-action@v1
         with:
-          test_suite_id: 'my-test-suite-id'
+          collection_id: 'my-collection-id'
           service_account_key: ${{ secrets.CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY }}
           app_name_override: 'My App'
           app_platform_override: 'android'
@@ -163,10 +164,10 @@ jobs:
           app_name: 'My App'
           app_tags: 'latest, ${{ github.sha }}'
 
-      - name: Run the test suite on the uploaded app
+      - name: Run the collection on the uploaded app
         uses: foreai-co/cj-action@v1
         with:
-          test_suite_id: 'my-test-suite-id'
+          collection_id: 'my-collection-id'
           service_account_key: ${{ secrets.CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY }}
           # Optional if the tests run on the app's latest tag.
           app_file_id_override: ${{ steps.upload.outputs.app_file_id }}

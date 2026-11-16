@@ -4,10 +4,13 @@ spec:
       description: "Your Critical Journey service account key. Store this as a CI/CD variable."
     test_id:
       default: ""
-      description: "ID of a single test to run. Either this or test_suite_id must be provided."
+      description: "ID of a single test to run. Either this or collection_id must be provided."
+    collection_id:
+      default: ""
+      description: "ID of a collection to run."
     test_suite_id:
       default: ""
-      description: "ID of a test suite to run."
+      description: "Older name of collection_id, kept for existing pipelines. Despite its name it takes the ID of a collection. If both are set, collection_id is used."
     wait_timeout_seconds:
       default: "300"
       description: "Max seconds to wait for results (30–900)."
@@ -55,6 +58,7 @@ critical-journey:
   variables:
     INPUT_SERVICE_ACCOUNT_KEY: $[[ inputs.service_account_key ]]
     INPUT_TEST_ID: $[[ inputs.test_id ]]
+    INPUT_COLLECTION_ID: $[[ inputs.collection_id ]]
     INPUT_TEST_SUITE_ID: $[[ inputs.test_suite_id ]]
     INPUT_WAIT_TIMEOUT_SECONDS: $[[ inputs.wait_timeout_seconds ]]
     INPUT_WEBSITE_URL_OVERRIDE: $[[ inputs.website_url_override ]]
