@@ -89,6 +89,19 @@ def _get_app_override_from_env() -> dict | None:
     }
 
 
+def _get_collection_id_from_env() -> str:
+    """Reads the collection to run from collection_id, else from its older name test_suite_id.
+
+    test_suite_id has always taken the ID of a collection, despite its name.
+    """
+    collection_id = os.getenv("INPUT_COLLECTION_ID", "").strip()
+    test_suite_id = os.getenv("INPUT_TEST_SUITE_ID", "").strip()
+    if collection_id and test_suite_id and collection_id != test_suite_id:
+        print(f"Warning: Both collection_id and test_suite_id are set; "
+              f"running collection {collection_id}.")
+    return collection_id or test_suite_id
+
+
 def _create_run_settings_from_env() -> dict:
     """Creates run settings from environment variables."""
     run_settings = {}
@@ -293,7 +306,7 @@ def run(session: requests.Session) -> tuple[bool, str, list[str]]:
             - Third element: List of failed test run IDs (empty if all passed or on error).
     """
     test_id = os.getenv("INPUT_TEST_ID", "")
-    collection_id = os.getenv("INPUT_TEST_SUITE_ID", "")
+    collection_id = _get_collection_id_from_env()
     service_account_key = os.getenv("INPUT_SERVICE_ACCOUNT_KEY", "")
 
     wait_timeout_seconds = int(os.getenv("INPUT_WAIT_TIMEOUT_SECONDS", "300"))
@@ -325,7 +338,7 @@ def run(session: requests.Session) -> tuple[bool, str, list[str]]:
             )
 
         if not collection_id:
-            return False, "Failed: Either test_id or test_suite_id should be provided.", []
+            return False, "Failed: Either test_id or collection_id should be provided.", []
 
         return _handle_bulk_test_run(
             session=session,

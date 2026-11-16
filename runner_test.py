@@ -228,7 +228,7 @@ class RunnerTests(unittest.TestCase):
 
         with patch.dict(os.environ, {
             "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
-            "INPUT_TEST_SUITE_ID": "collection-id",
+            "INPUT_COLLECTION_ID": "collection-id",
             "INPUT_WEBSITE_URL_OVERRIDE": "https://example.com",
             "INPUT_VARIABLE_OVERRIDES": (
                 '{"3f2504e0-4f89-11d3-9a0c-0305e82c3301":'
@@ -304,7 +304,7 @@ class RunnerTests(unittest.TestCase):
 
         with patch.dict(os.environ, {
             "INPUT_SERVICE_ACCOUNT_KEY": "test_key",
-            "INPUT_TEST_SUITE_ID": "collection-id",
+            "INPUT_COLLECTION_ID": "collection-id",
         }, clear=True):
             with patch.object(session, "post", side_effect=fake_post):
                 with patch.object(session, "get", side_effect=fake_get):
@@ -379,7 +379,7 @@ class RunnerTests(unittest.TestCase):
             with self.subTest(statuses=statuses, fail_on_skipped=fail_on_skipped,
                               fail_on_not_runnable=fail_on_not_runnable):
                 result, output_msg, failed_run_ids = self._run_with_statuses(statuses, {
-                    "INPUT_TEST_SUITE_ID": "collection-id",
+                    "INPUT_COLLECTION_ID": "collection-id",
                     "INPUT_FAIL_ON_SKIPPED": fail_on_skipped,
                     "INPUT_FAIL_ON_NOT_RUNNABLE": fail_on_not_runnable,
                 })
@@ -387,9 +387,29 @@ class RunnerTests(unittest.TestCase):
                 self.assertIn(msg, output_msg)
                 self.assertEqual(failed_run_ids, ids)
 
+    def test_collection_id_and_test_suite_id(self):
+        """Test that test_suite_id is an older name of collection_id, which takes precedence."""
+        cases = [
+            {"INPUT_COLLECTION_ID": "collection-id"},
+            {"INPUT_TEST_SUITE_ID": "collection-id"},
+            {"INPUT_COLLECTION_ID": "collection-id", "INPUT_TEST_SUITE_ID": "other-id"},
+        ]
+        for env in cases:
+            with self.subTest(env=env):
+                # The fake backend only knows the collection "collection-id".
+                result, msg, _ = self._run_with_statuses(["passed"], env)
+                self.assertTrue(result, msg)
+                self.assertIn("1 passed, 0 failed", msg)
+
+    def test_no_test_or_collection(self):
+        """Test that the action fails without a test or a collection to run."""
+        result, msg, _ = self._run_with_statuses(["passed"], {})
+        self.assertFalse(result)
+        self.assertEqual(msg, "Failed: Either test_id or collection_id should be provided.")
+
     def test_handle_bulk_test_run_defaults_for_not_executed_runs(self):
         """Test that by default not runnable runs fail the action and skipped runs do not."""
-        env = {"INPUT_TEST_SUITE_ID": "collection-id"}
+        env = {"INPUT_COLLECTION_ID": "collection-id"}
         self.assertTrue(self._run_with_statuses(["passed", "skipped"], env)[0])
         self.assertFalse(self._run_with_statuses(["passed", "not_runnable"], env)[0])
 

@@ -6,8 +6,9 @@ This GitLab CI/CD component runs the Critical Journey script inside a Docker con
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `test_id` | No* | | ID of the test to be run. Either this or `test_suite_id` should be provided. |
-| `test_suite_id` | No* | | ID of the test suite to be run. |
+| `test_id` | No* | | ID of the test to be run. Either this or `collection_id` should be provided. |
+| `collection_id` | No* | | ID of the collection to be run. |
+| `test_suite_id` | No | | Older name of `collection_id`, kept for existing pipelines. Despite its name it takes the ID of a collection. If both are set, `collection_id` is used. |
 | `service_account_key` | Yes | | Your service account key to access fore.ai Critical Journey. |
 | `wait_timeout_seconds` | No | `300` | Maximum seconds to wait for the test to complete. Must be between 30 and 900. |
 | `website_url_override` | No | | Overrides the base website URL used during test execution. |
@@ -27,38 +28,32 @@ Cancelled and aborted runs always fail the job.
 ```yaml
 include:
   - component: gitlab.com/foreai-co/cj-action/critical-journey@<version>
-
-run-critical-journey:
-  variables:
-    TEST_ID: "my-test-id"
-    SERVICE_ACCOUNT_KEY: $CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY
+    inputs:
+      test_id: "my-test-id"
+      service_account_key: $CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY
 ```
 
-## Example Usage for running a test suite
+## Example Usage for running a collection
 ```yaml
 include:
   - component: gitlab.com/foreai-co/cj-action/critical-journey@<version>
-
-run-critical-journey:
-  variables:
-    TEST_SUITE_ID: "my-test-suite-id"
-    SERVICE_ACCOUNT_KEY: $CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY
-    WAIT_TIMEOUT_SECONDS: "360"
-    WEBSITE_URL_OVERRIDE: "https://beta-dev.my-awesome.com/2"
-    VARIABLE_OVERRIDES: '{ "3f2504e0-4f89-11d3-9a0c-0305e82c3301": { "kind": "non_secret", "value": "value1" } }'
+    inputs:
+      collection_id: "my-collection-id"
+      service_account_key: $CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY
+      wait_timeout_seconds: "360"
+      website_url_override: "https://beta-dev.my-awesome.com/2"
+      variable_overrides: '{ "3f2504e0-4f89-11d3-9a0c-0305e82c3301": { "kind": "non_secret", "value": "value1" } }'
 ```
 
 ## Example Usage with automatic GitLab issue creation on failure
+Requires a `GITLAB_TOKEN` CI/CD variable.
 ```yaml
 include:
   - component: gitlab.com/foreai-co/cj-action/critical-journey@<version>
-
-run-critical-journey:
-  variables:
-    TEST_SUITE_ID: "my-test-suite-id"
-    SERVICE_ACCOUNT_KEY: $CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY
-    CREATE_ISSUE_ON_FAILURE: "true"
-    GITLAB_TOKEN: $GITLAB_TOKEN
+    inputs:
+      collection_id: "my-collection-id"
+      service_account_key: $CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY
+      create_issue_on_failure: "true"
 ```
 
 ## Upload app component
