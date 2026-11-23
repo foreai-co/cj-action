@@ -13,9 +13,9 @@ This GitHub Action runs the critical journey script inside a Docker container.
 - `variable_overrides`: (Optional) Allows overriding test suite variables for this run. This should be a valid json string mapping each variable definition ID to an override object, e.g. `{ "0b5f...": { "kind": "non_secret", "value": "abc" } }`.
 - `browser_type_override`: (Optional) Browser engine to run the test with: 'chromium', 'firefox', or 'webkit'. Defaults to 'chromium' if not specified.
 - `app_file_id_override`: (Optional) ID of the app file to run the tests on instead of their own app, e.g. the `app_file_id` output of the [upload-app action](#upload-app-action).
-- `app_name_override`: (Optional) Name of the app to run the tests on instead of their own app. Requires `app_platform_override`. Cannot be combined with `app_file_id_override`.
-- `app_platform_override`: (Optional) Platform of the app in `app_name_override`: `android` or `ios`.
-- `app_tag_override`: (Optional) Tag of the app in `app_name_override` whose file the tests run on. Defaults to `latest`.
+- `app_id_override`: (Optional) ID of the app to run the tests on instead of their own app, e.g. the `app_id` output of the [upload-app action](#upload-app-action). The tests run on the app's file tagged `app_tag_override`. Cannot be combined with `app_file_id_override`.
+- `app_tag_override`: (Optional) Tag of the app in `app_id_override` whose file the tests run on. Defaults to `latest`.
+- `app_name_override`, `app_platform_override`: No longer supported, use `app_id_override`. Setting either fails the run.
 - `create_issue_on_failure`: (Optional) If `true`, automatically creates a GitHub issue when the test run fails. The issue includes step traces, error details, test configuration, and a screenshot from the last executed step. Requires `GITHUB_TOKEN` to be available. Default is `false`.
 - `fail_on_skipped`: (Optional) If `true`, the action fails when any test in the run was skipped. Default is `false`.
 - `fail_on_not_runnable`: (Optional) If `true`, the action fails when any test could not be run, e.g. because it is still generating. Default is `true`.
@@ -114,8 +114,7 @@ Tests run on their own app. Overriding it is optional: tests that use their app'
         with:
           collection_id: 'my-collection-id'
           service_account_key: ${{ secrets.CRITICAL_JOURNEY_SERVICE_ACCOUNT_KEY }}
-          app_name_override: 'My App'
-          app_platform_override: 'android'
+          app_id_override: 'my-app-id'
           app_tag_override: 'staging'
 ```
 
@@ -134,6 +133,7 @@ Tests run on their own app. Overriding it is optional: tests that use their app'
 ### Outputs
 
 - `app_file_id`: ID of the uploaded app file.
+- `app_id`: ID of the app the file was uploaded to.
 - `result`: A message that includes information about the upload.
 
 ### Example Usage for uploading an app and testing it

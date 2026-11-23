@@ -53,18 +53,25 @@ inputs:
     required: false
     default: ''
 
-  app_name_override:
-    description: 'Name of the app to run the tests on instead of their own app. Needs app_platform_override.'
-    required: false
-    default: ''
-
-  app_platform_override:
-    description: 'Platform of the app set in app_name_override: android or ios.'
+  app_id_override:
+    description: >-
+      ID of the app to run the tests on instead of their own app, e.g. the app_id output of
+      the upload-app action. The tests run on the app's file tagged app_tag_override.
     required: false
     default: ''
 
   app_tag_override:
-    description: 'Tag of the app set in app_name_override whose file to run the tests on. Defaults to latest.'
+    description: 'Tag of the app set in app_id_override whose file to run the tests on. Defaults to latest.'
+    required: false
+    default: ''
+
+  app_name_override:
+    description: 'No longer supported, use app_id_override. Setting it fails the run.'
+    required: false
+    default: ''
+
+  app_platform_override:
+    description: 'No longer supported, use app_id_override. Setting it fails the run.'
     required: false
     default: ''
 

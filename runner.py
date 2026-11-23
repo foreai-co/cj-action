@@ -16,7 +16,6 @@ FAILED_STATUSES = ("failed", "cancelled", "aborted")
 NOT_EXECUTED_STATUSES = {"skipped": "false", "not_runnable": "true"}
 FINISHED_STATUSES = ("passed", *FAILED_STATUSES, *NOT_EXECUTED_STATUSES)
 
-APP_PLATFORMS = ("android", "ios")
 DEFAULT_APP_TAG = "latest"
 
 
@@ -56,37 +55,33 @@ def _get_headers(token: str) -> dict:
 def _get_app_override_from_env() -> dict | None:
     """Reads the app to run the tests on instead of their own, None to run their own.
 
-    The app is either one of its files, by ID, or one of its tags, by the app's name
-    and platform and the tag (``latest`` by default).
+    The app is either one of its files, by ID, or one of its tags, by the app's ID and
+    the tag (``latest`` by default).
     """
+    # Tag references take the app's ID since the backend stopped naming apps in them.
+    # Fail rather than silently run the tests on their own app.
+    if (os.getenv("INPUT_APP_NAME_OVERRIDE", "").strip()
+            or os.getenv("INPUT_APP_PLATFORM_OVERRIDE", "").strip()):
+        raise ValueError(
+            "app_name_override and app_platform_override are no longer supported, "
+            "set app_id_override to the app's ID instead."
+        )
     app_file_id = os.getenv("INPUT_APP_FILE_ID_OVERRIDE", "").strip()
-    app_name = os.getenv("INPUT_APP_NAME_OVERRIDE", "").strip()
-    platform = os.getenv("INPUT_APP_PLATFORM_OVERRIDE", "").strip().lower()
+    app_id = os.getenv("INPUT_APP_ID_OVERRIDE", "").strip()
     tag = os.getenv("INPUT_APP_TAG_OVERRIDE", "").strip()
 
     if app_file_id:
-        if app_name or platform or tag:
+        if app_id or tag:
             raise ValueError(
-                "Set either app_file_id_override or app_name_override, "
-                "app_platform_override and app_tag_override, not both."
+                "Set either app_file_id_override or app_id_override and app_tag_override, "
+                "not both."
             )
         return {"kind": "app_file_id", "app_file_id": app_file_id}
-    if not app_name:
-        if platform or tag:
-            raise ValueError(
-                "app_platform_override and app_tag_override need app_name_override.")
+    if not app_id:
+        if tag:
+            raise ValueError("app_tag_override needs app_id_override.")
         return None
-    if platform not in APP_PLATFORMS:
-        raise ValueError(
-            f"app_platform_override must be one of {', '.join(APP_PLATFORMS)} "
-            "when app_name_override is set."
-        )
-    return {
-        "kind": "app_tag",
-        "app_name": app_name,
-        "platform": platform,
-        "tag": tag or DEFAULT_APP_TAG,
-    }
+    return {"kind": "app_tag", "app_id": app_id, "tag": tag or DEFAULT_APP_TAG}
 
 
 def _get_collection_id_from_env() -> str:

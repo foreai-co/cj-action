@@ -61,6 +61,7 @@ class UploaderTests(unittest.TestCase):
                 if self.url_path == "/organizations/org-id/app-files":
                     return {
                         "app_file_id": "app-file-id",
+                        "app_id": "app-id",
                         "app_name": "My App",
                         "file_name": "app.apk",
                     }
@@ -108,7 +109,7 @@ class UploaderTests(unittest.TestCase):
         })
         self.assertTrue(result, msg)
         self.assertEqual(msg, "Uploaded app.apk to app My App as app file app-file-id.")
-        self.assertEqual(outputs, {"app_file_id": "app-file-id"})
+        self.assertEqual(outputs, {"app_file_id": "app-file-id", "app_id": "app-id"})
 
         upload_url, upload_kwargs = posts[-1]
         self.assertEqual(

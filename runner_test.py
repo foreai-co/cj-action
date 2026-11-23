@@ -235,8 +235,7 @@ class RunnerTests(unittest.TestCase):
                 ' {"kind": "non_secret", "value": "bar"}}'
             ),
             "INPUT_BROWSER_TYPE_OVERRIDE": "firefox",
-            "INPUT_APP_NAME_OVERRIDE": "My App",
-            "INPUT_APP_PLATFORM_OVERRIDE": "android",
+            "INPUT_APP_ID_OVERRIDE": "3f2504e0-4f89-11d3-9a0c-0305e82c3302",
         }, clear=True):
             with patch.object(session, "post", side_effect=fake_post):
                 with patch.object(session, "get", side_effect=fake_get):
@@ -438,11 +437,10 @@ class RunnerTests(unittest.TestCase):
             ({}, None),
             ({"INPUT_APP_FILE_ID_OVERRIDE": "file-id"},
              {"kind": "app_file_id", "app_file_id": "file-id"}),
-            ({"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "Android"},
-             {"kind": "app_tag", "app_name": "My App", "platform": "android", "tag": "latest"}),
-            ({"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "ios",
-              "INPUT_APP_TAG_OVERRIDE": "1.4.3"},
-             {"kind": "app_tag", "app_name": "My App", "platform": "ios", "tag": "1.4.3"}),
+            ({"INPUT_APP_ID_OVERRIDE": "app-id"},
+             {"kind": "app_tag", "app_id": "app-id", "tag": "latest"}),
+            ({"INPUT_APP_ID_OVERRIDE": "app-id", "INPUT_APP_TAG_OVERRIDE": "1.4.3"},
+             {"kind": "app_tag", "app_id": "app-id", "tag": "1.4.3"}),
         ]
         for env, expected in cases:
             with self.subTest(env=env):
@@ -450,14 +448,31 @@ class RunnerTests(unittest.TestCase):
                     run_settings = runner_module._create_run_settings_from_env()
                 self.assertEqual(run_settings.get("mobile_app_override"), expected)
 
+    def test_app_override_matches_spec(self):
+        """Test that each kind of app override has the fields the backend's schema asks for."""
+        schemas = self.openapi_spec["components"]["schemas"]
+        cases = [
+            ({"INPUT_APP_FILE_ID_OVERRIDE": "file-id"}, "AppFileReference"),
+            ({"INPUT_APP_ID_OVERRIDE": "app-id"}, "AppTagReference"),
+        ]
+        for env, schema_name in cases:
+            with self.subTest(schema=schema_name):
+                with patch.dict(os.environ, env, clear=True):
+                    override = runner_module._create_run_settings_from_env()["mobile_app_override"]
+                # Schemas used in requests and responses alike get an -Input suffix.
+                schema = schemas.get(f"{schema_name}-Input") or schemas[schema_name]
+                self.assertLessEqual(override.keys(), schema["properties"].keys())
+                self.assertLessEqual(set(schema.get("required", [])), override.keys())
+
     def test_invalid_app_override_from_env(self):
         """Test that inconsistent app overrides are rejected."""
         cases = [
-            {"INPUT_APP_FILE_ID_OVERRIDE": "file-id", "INPUT_APP_NAME_OVERRIDE": "My App"},
-            {"INPUT_APP_NAME_OVERRIDE": "My App"},
-            {"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "windows"},
-            {"INPUT_APP_PLATFORM_OVERRIDE": "android"},
+            {"INPUT_APP_FILE_ID_OVERRIDE": "file-id", "INPUT_APP_ID_OVERRIDE": "app-id"},
+            {"INPUT_APP_FILE_ID_OVERRIDE": "file-id", "INPUT_APP_TAG_OVERRIDE": "latest"},
             {"INPUT_APP_TAG_OVERRIDE": "latest"},
+            # No longer supported: the backend references apps by ID.
+            {"INPUT_APP_NAME_OVERRIDE": "My App", "INPUT_APP_PLATFORM_OVERRIDE": "android"},
+            {"INPUT_APP_ID_OVERRIDE": "app-id", "INPUT_APP_PLATFORM_OVERRIDE": "android"},
         ]
         for env in cases:
             with self.subTest(env=env):
