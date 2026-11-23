@@ -47,6 +47,8 @@ inputs:
 outputs:
   app_file_id:
     description: 'ID of the uploaded app file, e.g. for the app_file_id_override of the Critical Journey action.'
+  app_id:
+    description: 'ID of the app the file was uploaded to, e.g. for the app_id_override of the Critical Journey action.'
   result:
     description: 'A message that includes information about the upload.'
 

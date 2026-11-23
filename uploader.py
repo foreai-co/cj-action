@@ -77,7 +77,8 @@ def upload(session: requests.Session) -> tuple[bool, str, dict[str, str]]:
         Tuple[bool, str, dict[str, str]]:
             - First element: Whether the upload was successful.
             - Second element: Message shown in the output.
-            - Third element: The action's other outputs, i.e. the ``app_file_id``.
+            - Third element: The action's other outputs: the ``app_file_id`` and, from
+              backends that return it, the ``app_id``.
     """
     service_account_key = os.getenv("INPUT_SERVICE_ACCOUNT_KEY", "")
     app_file_path = os.getenv("INPUT_APP_FILE_PATH", "").strip()
@@ -106,4 +107,7 @@ def upload(session: requests.Session) -> tuple[bool, str, dict[str, str]]:
         f"Uploaded {app_file['file_name']} to app {app_file['app_name']} "
         f"as app file {app_file['app_file_id']}."
     )
-    return True, msg, {"app_file_id": app_file["app_file_id"]}
+    outputs = {"app_file_id": app_file["app_file_id"]}
+    if app_file.get("app_id"):
+        outputs["app_id"] = app_file["app_id"]
+    return True, msg, outputs

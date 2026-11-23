@@ -15,9 +15,8 @@ This GitLab CI/CD component runs the Critical Journey script inside a Docker con
 | `variable_overrides` | No | | Overrides test suite variables. Must be a valid JSON string keyed by variable definition ID, each value an override object. |
 | `browser_type_override` | No | `chromium` | Browser engine to run the test with: `chromium`, `firefox`, or `webkit`. |
 | `app_file_id_override` | No | | ID of the app file to run the tests on instead of their own app. |
-| `app_name_override` | No | | Name of the app to run the tests on instead of their own app. Requires `app_platform_override`. |
-| `app_platform_override` | No | | Platform of the app in `app_name_override`: `android` or `ios`. |
-| `app_tag_override` | No | `latest` | Tag of the app in `app_name_override` whose file the tests run on. |
+| `app_id_override` | No | | ID of the app to run the tests on instead of their own app, e.g. the `app_id` printed by the upload-app component. The tests run on the app's file tagged `app_tag_override`. |
+| `app_tag_override` | No | `latest` | Tag of the app in `app_id_override` whose file the tests run on. |
 | `create_issue_on_failure` | No | `false` | If `true`, automatically creates a GitLab issue when the test run fails. Requires `GITLAB_TOKEN` to be available. |
 | `fail_on_skipped` | No | `false` | If `true`, the job fails when any test in the run was skipped. |
 | `fail_on_not_runnable` | No | `true` | If `true`, the job fails when any test could not be run, e.g. because it is still generating. |
@@ -78,4 +77,4 @@ include:
       app_tags: "latest, $CI_COMMIT_SHORT_SHA"
 ```
 
-The tests of the Critical Journey component then run on the upload if they use the app's `latest` tag; set `app_name_override` and `app_platform_override` to run them on another app or tag.
+The tests of the Critical Journey component then run on the upload if they use the app's `latest` tag; set `app_id_override` and `app_tag_override` to run them on another app or tag. The upload prints the uploaded file's `app_file_id` and its app's `app_id`.
